@@ -615,6 +615,8 @@ func (a *App) ProcessLine(line string) string {
 			_ = commands.CmdRep(a.reg, args)
 		case "remove":
 			_ = commands.CmdRemove(a.reg, args)
+		case "edit":
+			_ = commands.CmdEdit(a.reg, args)
 
 		default:
 			fmt.Printf("Comando '%s' no reconocido.\n", command)
