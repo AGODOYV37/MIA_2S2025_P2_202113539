@@ -83,23 +83,6 @@ func invalidRenameName(s string) bool {
 	return false
 }
 
-func canWrite(ino Inodo, uid, gid int, isRoot bool) bool {
-	if isRoot {
-		return true
-	}
-	var p byte
-	switch {
-	case int(ino.IUid) == uid:
-		p = ino.IPerm[0]
-	case int(ino.IGid) == gid:
-		p = ino.IPerm[1]
-	default:
-		p = ino.IPerm[2]
-	}
-	const W = 2
-	return (int(p) & W) != 0
-}
-
 func replaceDirEntryName(mp *mount.MountedPartition, sb SuperBloque, parentIno, childIno int32, oldName, newName string) error {
 	p, err := readInodeAt(mp, sb, parentIno)
 	if err != nil {
