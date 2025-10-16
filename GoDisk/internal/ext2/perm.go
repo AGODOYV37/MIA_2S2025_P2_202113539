@@ -1,35 +1,35 @@
 package ext2
 
-// Permisos básicos (r=4, w=2)
-const (
-	permR = 4
-	permW = 2
-)
-
-func canRead(ino Inodo, uid, gid int, isRoot bool) bool {
+func CanRead(ino Inodo, uid, gid int, isRoot bool) bool {
 	if isRoot {
 		return true
 	}
+	var p byte
 	switch {
 	case int(ino.IUid) == uid:
-		return (ino.IPerm[0] & permR) != 0
+		p = ino.IPerm[0]
 	case int(ino.IGid) == gid:
-		return (ino.IPerm[1] & permR) != 0
+		p = ino.IPerm[1]
 	default:
-		return (ino.IPerm[2] & permR) != 0
+		p = ino.IPerm[2]
 	}
+	const R = 4
+	return (int(p) & R) != 0
 }
 
-func canWrite(ino Inodo, uid, gid int, isRoot bool) bool {
+func CanWrite(ino Inodo, uid, gid int, isRoot bool) bool {
 	if isRoot {
 		return true
 	}
+	var p byte
 	switch {
 	case int(ino.IUid) == uid:
-		return (ino.IPerm[0] & permW) != 0
+		p = ino.IPerm[0]
 	case int(ino.IGid) == gid:
-		return (ino.IPerm[1] & permW) != 0
+		p = ino.IPerm[1]
 	default:
-		return (ino.IPerm[2] & permW) != 0
+		p = ino.IPerm[2]
 	}
+	const W = 2
+	return (int(p) & W) != 0
 }

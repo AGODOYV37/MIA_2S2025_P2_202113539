@@ -18,9 +18,11 @@ func Rename(reg *mount.Registry, path, newName string) error {
 	if newName == "" {
 		return errors.New("rename: -name requerido")
 	}
-	s, ok := auth.Current()
-	if !ok {
+
+	s, err := auth.Require()
+	if err != nil {
 		return errors.New("rename: requiere sesión (login)")
 	}
+
 	return ext2.RenameNode(reg, s.ID, path, newName, s.UID, s.GID, s.IsRoot)
 }

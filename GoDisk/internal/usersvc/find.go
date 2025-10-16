@@ -14,9 +14,14 @@ func Find(reg *mount.Registry, startPath, namePattern string) ([]string, error) 
 	if startPath == "" || !strings.HasPrefix(startPath, "/") {
 		return nil, errors.New("find: -path inválido (debe ser absoluto)")
 	}
-	s, ok := auth.Current()
-	if !ok {
+	if strings.TrimSpace(namePattern) == "" {
+		namePattern = "*"
+	}
+
+	s, err := auth.Require()
+	if err != nil {
 		return nil, errors.New("find: requiere sesión (login)")
 	}
+
 	return ext2.Find(reg, s.ID, startPath, namePattern, s.UID, s.GID, s.IsRoot)
 }

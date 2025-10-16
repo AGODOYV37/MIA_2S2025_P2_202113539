@@ -43,7 +43,20 @@ func Find(reg *mount.Registry, id, startPath, pattern string, uid, gid int, isRo
 		return nil, fmt.Errorf("find: ruta no existe: %s", startPath)
 	}
 
+	// Debe ser carpeta y ser legible por el usuario
+	startNode, err := readInodeAt(mp, sb, startIno)
+	if err != nil {
+		return nil, err
+	}
+	if startNode.IType != 0 {
+		return nil, errors.New("find: -path debe ser una carpeta")
+	}
+	if !CanRead(startNode, uid, gid, isRoot) {
+		return nil, fmt.Errorf("find: sin permiso de lectura en '%s'", startPath)
+	}
+
 	re, err := globToRegex(pattern)
+
 	if err != nil {
 		return nil, fmt.Errorf("find: patrón inválido: %v", err)
 	}
@@ -60,14 +73,14 @@ func Find(reg *mount.Registry, id, startPath, pattern string, uid, gid int, isRo
 		// Si es archivo, evaluamos el nombre y retornamos.
 		if ino.IType == 1 {
 			base := path.Base(abs)
-			if canRead(ino, uid, gid, isRoot) && re.MatchString(base) {
+			if CanRead(ino, uid, gid, isRoot) && re.MatchString(base) {
 				out = append(out, abs)
 			}
 			return nil
 		}
 
 		// Carpeta: si no podemos leer, no la recorremos.
-		if !canRead(ino, uid, gid, isRoot) {
+		if !CanRead(ino, uid, gid, isRoot) {
 			return nil
 		}
 

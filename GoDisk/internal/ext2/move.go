@@ -57,7 +57,7 @@ func MoveNode(reg *mount.Registry, id, srcPath, destDir string, uid, gid int, is
 		return err
 	}
 	// Solo escritura sobre el ORIGEN
-	if !canWrite(srcNode, uid, gid, isRoot) {
+	if !CanWrite(srcNode, uid, gid, isRoot) {
 		return errors.New("move: sin permiso de escritura sobre el origen")
 	}
 

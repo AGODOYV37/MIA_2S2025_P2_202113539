@@ -151,3 +151,11 @@ func atoiSafe(s string) int {
 	}
 	return n
 }
+
+func Require() (*Session, error) {
+	s, ok := Current()
+	if !ok {
+		return nil, errors.New("requiere sesión (login)")
+	}
+	return s, nil
+}

@@ -14,9 +14,12 @@ func Mkdir(reg *mount.Registry, path string, p bool) error {
 	if path == "" || !strings.HasPrefix(path, "/") {
 		return errors.New("mkdir: -path inválido (debe ser absoluto)")
 	}
-	s, ok := auth.Current()
-	if !ok {
+	s, err := auth.Require()
+	if err != nil {
 		return errors.New("mkdir: requiere sesión (login)")
+	}
+	if !s.IsRoot {
+		return errors.New("mkdir: operación permitida solo para root")
 	}
 	return ext2.MakeDir(reg, s.ID, path, p, s.UID, s.GID)
 }

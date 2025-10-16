@@ -44,7 +44,7 @@ func CopyNode(reg *mount.Registry, id, srcPath, destDir string, uid, gid int, is
 	if err != nil {
 		return err
 	}
-	if !canRead(srcNode, uid, gid, isRoot) {
+	if !CanRead(srcNode, uid, gid, isRoot) {
 		fmt.Printf("copy: sin permiso de lectura sobre '%s' (omitido)\n", srcPath)
 		return nil
 	}
@@ -68,7 +68,7 @@ func CopyNode(reg *mount.Registry, id, srcPath, destDir string, uid, gid int, is
 	if dstNode.IType != 0 {
 		return fmt.Errorf("copy: -destino debe ser una carpeta: %s", destDir)
 	}
-	if !canWrite(dstNode, uid, gid, isRoot) {
+	if !CanWrite(dstNode, uid, gid, isRoot) {
 		return fmt.Errorf("copy: sin permiso de escritura en carpeta destino")
 	}
 
@@ -175,7 +175,7 @@ func copyDirToNewSkip(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []
 			return err
 		}
 		srcChildAbs := path.Join("/", srcAbs, ch.name)
-		if !canRead(chNode, uid, gid, isRoot) {
+		if !CanRead(chNode, uid, gid, isRoot) {
 			fmt.Printf("copy: sin permiso de lectura sobre '%s' (omitido)\n", srcChildAbs)
 			continue
 		}

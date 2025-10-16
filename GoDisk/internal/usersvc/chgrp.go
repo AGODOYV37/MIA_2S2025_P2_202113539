@@ -35,9 +35,9 @@ func Chgrp(reg *mount.Registry, user, newGrp string) error {
 		return errors.New("chgrp: no se permite cambiar el grupo del usuario root")
 	}
 
-	s, ok := auth.Current()
-	if !ok {
-		return errors.New("chgrp: no hay sesión activa; usa login")
+	s, err := auth.Require()
+	if err != nil {
+		return errors.New("chgrp: requiere sesión (login)")
 	}
 	if !s.IsRoot {
 		return errors.New("chgrp: operación permitida solo para root")

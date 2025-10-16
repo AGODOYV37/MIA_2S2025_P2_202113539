@@ -16,9 +16,9 @@ func Mkgrp(reg *mount.Registry, name string) error {
 		return errors.New("mkgrp: nombre inválido (no puede estar vacío ni contener espacios o comas)")
 	}
 
-	s, ok := auth.Current()
-	if !ok {
-		return errors.New("mkgrp: no hay sesión activa; usa login")
+	s, err := auth.Require()
+	if err != nil {
+		return errors.New("mkgrp: requiere sesión (login)")
 	}
 	if !s.IsRoot {
 		return errors.New("mkgrp: operación permitida solo para root")

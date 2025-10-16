@@ -14,9 +14,11 @@ func Edit(reg *mount.Registry, path string, data []byte) error {
 	if path == "" || !strings.HasPrefix(path, "/") {
 		return errors.New("edit: -path inválido (debe ser absoluto)")
 	}
-	s, ok := auth.Current()
-	if !ok {
+
+	s, err := auth.Require()
+	if err != nil {
 		return errors.New("edit: requiere sesión (login)")
 	}
+
 	return ext2.EditFile(reg, s.ID, path, data, s.UID, s.GID, s.IsRoot)
 }

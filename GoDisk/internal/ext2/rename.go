@@ -60,7 +60,7 @@ func RenameNode(reg *mount.Registry, id, absPath, newName string, uid, gid int, 
 	if err != nil {
 		return err
 	}
-	if !canWrite(ino, uid, gid, isRoot) {
+	if !CanWrite(ino, uid, gid, isRoot) {
 		return fmt.Errorf("rename: permisos insuficientes sobre '%s'", absPath)
 	}
 

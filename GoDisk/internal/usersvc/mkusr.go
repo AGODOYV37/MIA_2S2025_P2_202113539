@@ -22,9 +22,9 @@ func Mkusr(reg *mount.Registry, user, pass, grp string) error {
 		return errors.New("mkusr: usr/pass/grp no deben contener espacios ni comas")
 	}
 
-	s, ok := auth.Current()
-	if !ok {
-		return errors.New("mkusr: no hay sesión activa; usa login")
+	s, err := auth.Require()
+	if err != nil {
+		return errors.New("mkusr: requiere sesión (login)")
 	}
 	if !s.IsRoot {
 		return errors.New("mkusr: operación permitida solo para root")

@@ -17,9 +17,12 @@ func Mkfile(reg *mount.Registry, path string, recursive bool, size int, contPath
 		return errors.New("mkfile: -path inválido (debe ser absoluto)")
 	}
 
-	s, ok := auth.Current()
-	if !ok {
+	s, err := auth.Require()
+	if err != nil {
 		return errors.New("mkfile: requiere sesión (login)")
+	}
+	if !s.IsRoot {
+		return errors.New("mkfile: operación permitida solo para root")
 	}
 
 	if size < 0 {

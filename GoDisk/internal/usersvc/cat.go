@@ -14,45 +14,30 @@ func Cat(reg *mount.Registry, files []string) (string, error) {
 	if len(files) == 0 {
 		return "", errors.New("cat: especifica al menos un -fileN")
 	}
-	s, ok := auth.Current()
-	if !ok {
+	s, err := auth.Require()
+	if err != nil {
 		return "", errors.New("cat: requiere sesión (login)")
 	}
 
 	var b strings.Builder
-	for i, path := range files {
-		path = strings.TrimSpace(path)
-		if path == "" || !strings.HasPrefix(path, "/") {
-			return "", fmt.Errorf("cat: ruta inválida: %q", path)
+	for i, p := range files {
+		p = strings.TrimSpace(p)
+		if p == "" || !strings.HasPrefix(p, "/") {
+			return "", fmt.Errorf("cat: ruta inválida: %q", p)
 		}
-		ino, data, err := ext2.ReadFileByPath(reg, s.ID, path)
+
+		ino, data, err := ext2.ReadFileByPath(reg, s.ID, p)
 		if err != nil {
 			return "", err
 		}
-		if !canRead(ino, s) {
-			return "", fmt.Errorf("cat: permiso denegado para %s", path)
+		if !ext2.CanRead(ino, s.UID, s.GID, s.IsRoot) {
+			return "", fmt.Errorf("cat: permiso denegado para %s", p)
 		}
+
 		if i > 0 {
 			b.WriteByte('\n')
 		}
 		b.Write(data)
 	}
 	return b.String(), nil
-}
-
-func canRead(ino ext2.Inodo, s *auth.Session) bool {
-	if s.IsRoot {
-		return true
-	}
-	var cls byte
-	switch {
-	case int32(s.UID) == ino.IUid:
-		cls = 0
-	case int32(s.GID) == ino.IGid:
-		cls = 1
-	default:
-		cls = 2
-	}
-	perm := ino.IPerm[cls]
-	return (perm & 0b100) != 0
 }

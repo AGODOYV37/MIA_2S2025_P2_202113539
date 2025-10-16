@@ -19,9 +19,9 @@ func Rmusr(reg *mount.Registry, user string) error {
 		return errors.New("rmusr: no se permite eliminar al usuario root")
 	}
 
-	s, ok := auth.Current()
-	if !ok {
-		return errors.New("rmusr: no hay sesión activa; usa login")
+	s, err := auth.Require()
+	if err != nil {
+		return errors.New("rmusr: requiere sesión (login)")
 	}
 	if !s.IsRoot {
 		return errors.New("rmusr: operación permitida solo para root")

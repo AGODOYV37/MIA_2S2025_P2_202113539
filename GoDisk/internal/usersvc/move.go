@@ -19,11 +19,12 @@ func Move(reg *mount.Registry, src, dst string) error {
 		return errors.New("move: -destino inválido (debe ser absoluto)")
 	}
 
-	s, ok := auth.Current()
-	if !ok {
+	// Requiere sesión (cualquier usuario). Root bypasses permisos en ext2.* helpers.
+	s, err := auth.Require()
+	if err != nil {
 		return errors.New("move: requiere sesión (login)")
 	}
 
-	// Solo se verifican permisos de escritura sobre el ORIGEN (enunciado)
+	// La verificación de permisos (escritura sobre el ORIGEN) está en ext2.MoveNode
 	return ext2.MoveNode(reg, s.ID, src, dst, s.UID, s.GID, s.IsRoot)
 }

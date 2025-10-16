@@ -16,9 +16,9 @@ func Rmgrp(reg *mount.Registry, name string) error {
 		return errors.New("rmgrp: nombre inválido (no vacío ni con comas)")
 	}
 
-	s, ok := auth.Current()
-	if !ok {
-		return errors.New("rmgrp: no hay sesión activa; usa login")
+	s, err := auth.Require()
+	if err != nil {
+		return errors.New("rmgrp: requiere sesión (login)")
 	}
 	if !s.IsRoot {
 		return errors.New("rmgrp: operación permitida solo para root")

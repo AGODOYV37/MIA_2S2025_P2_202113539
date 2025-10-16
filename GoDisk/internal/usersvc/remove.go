@@ -15,8 +15,8 @@ func Remove(reg *mount.Registry, path string) error {
 		return errors.New("remove: -path inválido (debe ser absoluto)")
 	}
 
-	s, ok := auth.Current()
-	if !ok {
+	s, err := auth.Require()
+	if err != nil {
 		return errors.New("remove: requiere sesión (login)")
 	}
 
