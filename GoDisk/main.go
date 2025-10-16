@@ -625,6 +625,8 @@ func (a *App) ProcessLine(line string) string {
 			_ = commands.CmdMove(a.reg, args)
 		case "find":
 			_ = commands.CmdFind(a.reg, args)
+		case "chown":
+			_ = commands.CmdChown(a.reg, args)
 
 		default:
 			fmt.Printf("Comando '%s' no reconocido.\n", command)
