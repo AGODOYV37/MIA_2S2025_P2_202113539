@@ -1,3 +1,3 @@
-module github.com/AGODOYV37/MIA_2S2025_P1_202113539
+module github.com/AGODOYV37/MIA_2S2025_P2_202113539
 
 go 1.24.5

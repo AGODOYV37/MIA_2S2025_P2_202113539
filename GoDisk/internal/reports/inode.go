@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/ext2"
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/mount"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext2"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
 // ---------- Modelo JSON para Angular ----------

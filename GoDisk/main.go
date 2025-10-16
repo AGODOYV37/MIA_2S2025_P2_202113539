@@ -14,12 +14,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/catalog"
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/commands"
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/ext2"
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/mount"
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/reports"
-	u "github.com/AGODOYV37/MIA_2S2025_P1_202113539/pkg"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/catalog"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/commands"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext2"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/reports"
+	u "github.com/AGODOYV37/MIA_2S2025_P2_202113539/pkg"
 )
 
 // ---------------------- Infra de aplicación ----------------------
@@ -402,22 +402,66 @@ func (a *App) ProcessLine(line string) string {
 		case "fdisk":
 			fs := flag.NewFlagSet("fdisk", flag.ContinueOnError)
 			fs.SetOutput(io.Discard)
-			size := fs.Int64("size", 0, "Tamaño de la partición.")
-			path := fs.String("path", "", "Ruta del disco.")
-			name := fs.String("name", "", "Nombre de la partición.")
-			unit := fs.String("unit", "k", "Unidad del tamaño (b/k/m).")
-			typeStr := fs.String("type", "p", "Tipo de partición (p/e/l).")
-			fit := fs.String("fit", "wf", "Tipo de ajuste (bf/ff/wf).")
+			size := fs.Int64("size", 0, "Tamaño de la partición al CREAR.")
+			path := fs.String("path", "", "Ruta del disco (.mia/.dk).")
+			name := fs.String("name", "", "Nombre de la partición (único por disco).")
+			unit := fs.String("unit", "k", "Unidad (b/k/m). Aplica para -size y -add.")
+			typeStr := fs.String("type", "p", "Tipo de partición al CREAR (p/e/l).")
+			fit := fs.String("fit", "wf", "Ajuste al CREAR (bf/ff/wf).")
+			del := fs.String("delete", "", "Elimina partición por nombre: fast|full.")
+			add := fs.Int64("add", 0, "Agrega(+) o quita(-) espacio a la partición.")
 			if err := fs.Parse(args); err != nil {
 				fmt.Println("Error:", err)
 				return
 			}
-			if *path == "" || *name == "" || *size <= 0 {
-				fmt.Println("Error: los parámetros -path, -name y -size son obligatorios para fdisk.")
+			if strings.TrimSpace(*path) == "" {
+				fmt.Println("Error: -path es obligatorio.")
 				return
 			}
-
-			commands.ExecuteFdisk(*path, *name, *unit, *typeStr, *fit, *size)
+			// DELETE
+			if strings.TrimSpace(*del) != "" {
+				if strings.TrimSpace(*name) == "" {
+					fmt.Println("Error: -name es obligatorio para -delete.")
+					return
+				}
+				if err := commands.ExecuteFdisk(commands.FdiskOptions{
+					Path: *path, Name: *name, Delete: strings.ToLower(*del),
+				}); err != nil {
+					fmt.Println("Error:", err)
+					return
+				}
+				_ = catalog.Add(*path)
+				_ = a.reg.RehydrateFromCatalog()
+				return
+			}
+			//  ADD (crece/encoge)
+			if *add != 0 {
+				if strings.TrimSpace(*name) == "" {
+					fmt.Println("Error: -name es obligatorio para -add.")
+					return
+				}
+				if err := commands.ExecuteFdisk(commands.FdiskOptions{
+					Path: *path, Name: *name, Unit: strings.ToLower(*unit), Add: *add,
+				}); err != nil {
+					fmt.Println("Error:", err)
+					return
+				}
+				_ = catalog.Add(*path)
+				_ = a.reg.RehydrateFromCatalog()
+				return
+			}
+			// CREATE
+			if strings.TrimSpace(*name) == "" || *size <= 0 {
+				fmt.Println("Error: para CREAR se requieren -name y -size > 0.")
+				return
+			}
+			if err := commands.ExecuteFdisk(commands.FdiskOptions{
+				Path: *path, Name: *name, Unit: strings.ToLower(*unit),
+				Type: strings.ToLower(*typeStr), Fit: strings.ToLower(*fit), Size: *size,
+			}); err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
 			_ = catalog.Add(*path)
 			_ = a.reg.RehydrateFromCatalog()
 

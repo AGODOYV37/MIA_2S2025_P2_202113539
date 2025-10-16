@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/catalog"
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/diskio"
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/structs"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/catalog"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/diskio"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/structs"
 )
 
 func (r *Registry) RehydrateFromCatalog() error {

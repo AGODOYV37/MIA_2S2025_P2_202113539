@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/diskio"
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/mount"
-	"github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/structs"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/diskio"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/structs"
 )
 
 type DiskReport struct {

@@ -1,6 +1,6 @@
 package diskio
 
-import "github.com/AGODOYV37/MIA_2S2025_P1_202113539/internal/structs"
+import "github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/structs"
 
 func FindPrimaryByName(m *structs.MBR, name string) (int, *structs.Partition) {
 	for i := 0; i < len(m.Mbr_partitions); i++ {
