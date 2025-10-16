@@ -1,0 +1,72 @@
+#-----------------5. MKFS-----------------
+mkfs -type=full -id=391A
+#-----------------PARTE 3-----------------
+#-----------------7. LOGIN-----------------
+login -user=root -pass=123 -id=391A
+#ERROR SESION INICIADA
+login -user=root -pass=123 -id=391A
+#-----------------9. MKGRP-----------------
+mkgrp -name=usuarios
+mkgrp -name=adm
+mkgrp -name=mail
+mkgrp -name=news
+mkgrp -name=sys
+#ERROR YA EXISTE EL GRUPO
+mkgrp -name=sys
+#-----------------6. CAT-----------------
+cat -file1=/users.txt
+#-----------------10. RMGR-----------------
+rmgrp -name=mail
+#-----------------6. CAT-----------------
+cat -file1=/users.txt
+#-----------------11. MKUSR-----------------------------------------------
+mkusr -user="usuario1" -pass=password -grp=root
+mkusr -user="user1" -pass=abc -grp=usuarios
+mkusr -user="user2" -pass=abc -grp=usuarios
+#ERROR EL USUARIO YA EXISTE
+mkusr -user="user2" -pass=abc -grp=usuarios
+#ERROR GRUPO NO EXISTE
+mkusr -user="user3" -pass=abc -grp=system
+#-----------------6. CAT-----------------
+cat -file1=/users.txt
+#-----------------13. CHGRP-----------------
+chgrp -user=user2 -grp=adm
+#-----------------6. CAT-----------------
+cat -file1=/users.txt
+#-----------------12. RMUSR-----------------
+rmusr -user=user2
+#-----------------6. CAT-----------------
+cat -file1=/users.txt
+#-----------------15. MKDIR-----------------
+mkdir -path=/bin
+# ERROR NO EXISTEN LAS CARPETAS PADRES
+mkdir -path="/home/archivos/archivos 24"
+mkdir -p -path=/home/archivos/user/docs/usac
+mkdir -p -path=/home/archivos/carpeta1/carpeta2/carpeta3/carpeta4/carpeta5
+#-----------------8. LOGOUT-----------------
+logout
+logout #ERROR NO HAY SESION INICIADA
+#-----------------7. LOGIN-----------------
+#Validar un inicio de sesión para un usuario creado
+login -user=user1 -pass=abc -id=391A
+logout 
+#Regresamos al root 
+login -user=root -pass=123 -id=391A
+#-----------------14. MKFILE-----------------
+# echo "Ángel" > /tmp/miarchivo.txt
+# echo "Otra línea" >> /tmp/miarchivo.txt
+mkfile -path=/home/archivos/user/docs/Tarea.txt -size=75
+mkfile -path=/home/archivos/user/docs/Tarea2.txt -size=768
+#Para este comando hay que crear un archivo en la computadora y en cont poner su primer nombre
+#Crear un archivo txt en su Escritorio llamado NAME
+# Cambiar la ruta del cont por la del archivo NAME.txt que creo
+mkfile -path=/home/archivos/user/docs/Tarea3.txt -size=10 -cont=/tmp/miarchivo.txt
+#ERROR NO EXISTE RUTA
+mkfile -path="/home/archivos/noexiste/b1.txt"
+#ERROR NEGATIVO
+mkfile -path="/home/archivos/b1.txt" -size=-45
+#RECURSIVO
+mkfile -r -path=/home/archivos/user/docs/usac/archivos/proyectos/fase1/entrada.txt
+#-----------------6. CAT-----------------
+cat -file1=/home/archivos/user/docs/Tarea2.txt
+cat -file1=/home/archivos/user/docs/Tarea3.txt

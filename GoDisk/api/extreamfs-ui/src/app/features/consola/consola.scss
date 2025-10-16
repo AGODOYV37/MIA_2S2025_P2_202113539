@@ -1,0 +1,317 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); 
+
+html, body {
+  background:#212121;
+  color:#eee;     
+}
+
+
+
+.mbroverlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.mbrcard {
+  width: min(900px, 95vw);
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.mosaic {
+  --cols: 100; 
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 2px;
+  width: 100%;
+
+  overflow: hidden;
+}
+
+.mosaic .blk {
+
+  height: 12px;
+  border-radius: 2px;
+}
+
+@media (max-width: 600px) {
+  .mosaic .blk { height: 8px; }
+}
+
+.blk {
+  width: 100%;
+  padding-top: 100%; // cuadrado
+  border-radius: 2px;
+  outline: 1px solid rgba(255,255,255,.6);
+}
+
+.inode-mosaic {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.run {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  background: #f7f7f7;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+.run-gap {
+  opacity: .6;
+  font-size: 18px;
+}
+.blk {
+  min-width: 34px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #8ecae6;
+  color: #0b2438;
+  font-size: 12px;
+  text-align: center;
+  border: 1px solid #cfe8f6;
+}
+.small { color:#666; font-size:12px; }
+
+
+/* ===== LS modal styles ===== */
+.ls-meta {
+  display: flex;
+  gap: 12px;
+  color: #555;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.ls-wrap {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ls-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+.ls-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  color: #111827;
+  text-align: left;
+  padding: .6rem .7rem;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 1;
+}
+
+.ls-table tbody td {
+  padding: .55rem .7rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.ls-table tbody tr:nth-child(even) {
+  background: #fcfcfd;
+}
+
+.ls-table tbody tr:hover {
+  background: #f6faff;
+}
+
+.num { text-align: right; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+
+.type-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.2;
+  background: #fff;
+}
+.type-chip.tc-dir  { background: #e0f2fe; border-color: #bae6fd; }
+.type-chip.tc-file { background: #dcfce7; border-color: #bbf7d0; }
+.type-chip.tc-other{ background: #f3f4f6; border-color: #e5e7eb; }
+
+.badge-dot {
+  display:inline-block;
+  width:10px; height:10px;
+  border-radius:50%;
+  margin-right:8px;
+  vertical-align:middle;
+  border:1px solid #e5e7eb;
+}
+.badge-dir   { background:#38bdf8; border-color:#7dd3fc; }
+.badge-file  { background:#34d399; border-color:#86efac; }
+.badge-other { background:#cbd5e1; border-color:#e5e7eb; }
+
+
+.kMBR { background: #ffd166; }
+.kP   { background: #06d6a0; }
+.kE   { background: #118ab2; }
+.kL   { background: #8ecae6; }
+.kEBR { background: #ffafcc; }
+.kFREE{ background: #eeeeee; }
+
+.mosaic .blk.kMBR  { background:#fee2e2; }
+.mosaic .blk.kP    { background:#bfdbfe; }
+.mosaic .blk.kE    { background:#fde68a; }
+.mosaic .blk.kL    { background:#bbf7d0; }
+.mosaic .blk.kEBR  { background:#f5d0fe; }
+.mosaic .blk.kFREE { background:#e5e7eb; }
+
+
+
+:host {
+  --retro-bg: #000;            
+  --retro-fg: #39ff14;       
+  --retro-fg-dim: #21a60d;    
+}
+
+
+.retro-title {
+  color: var(--retro-fg);
+  text-shadow: 0 0 6px rgba(57,255,20,.6);
+  font-weight: 600;
+
+}
+
+.retro-label {
+  color: var(--retro-fg);
+  margin: 6px 0 4px;
+  display: inline-block;
+  letter-spacing: .02em;
+  text-shadow: 0 0 4px rgba(57,255,20,.5);
+
+}
+
+
+.crt {
+  width: 100%;
+  background: var(--retro-bg);
+  color: var(--retro-fg);
+  border: 1px solid rgba(57,255,20,.35);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow:
+    inset 0 0 24px rgba(57,255,20,.08),
+    0 0 0 1px rgba(57,255,20,.12);
+  outline: none;
+  resize: vertical;
+  line-height: 1.35;
+  font-size: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; /* o 'VT323' */
+  text-shadow: 0 0 2px rgba(57,255,20,.75), 0 0 10px rgba(57,255,20,.35);
+  caret-color: var(--retro-fg);
+
+
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,.03) 0px,
+      rgba(255,255,255,.03) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  background-blend-mode: overlay;
+}
+
+.crt:focus {
+  border-color: rgba(57,255,20,.6);
+  box-shadow:
+    inset 0 0 28px rgba(57,255,20,.12),
+    0 0 10px rgba(57,255,20,.2);
+}
+
+.crt::selection {
+  background: rgba(57,255,20,.35);
+  color: #001;
+}
+
+
+.crt::-webkit-scrollbar { width: 10px; }
+.crt::-webkit-scrollbar-thumb {
+  background: rgba(57,255,20,.25);
+  border-radius: 8px;
+}
+.crt::-webkit-scrollbar-track {
+  background: rgba(57,255,20,.06);
+  border-radius: 8px;
+}
+
+
+.retro-btn {
+  background: #000;
+  color: var(--retro-fg);
+  border: 1px solid rgba(57,255,20,.5);
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  cursor: pointer;
+  text-shadow: 0 0 3px rgba(57,255,20,.8);
+  box-shadow:
+    0 0 0 1px rgba(57,255,20,.12),
+    inset 0 0 12px rgba(57,255,20,.06);
+  transition: box-shadow .15s ease, transform .05s ease;
+}
+
+.retro-btn:hover:not([disabled]) {
+  box-shadow:
+    0 0 12px rgba(57,255,20,.25),
+    inset 0 0 18px rgba(57,255,20,.1);
+}
+
+.retro-btn:active:not([disabled]) {
+  transform: translateY(1px);
+}
+
+.retro-btn[disabled] {
+  opacity: .55;
+  cursor: default;
+  filter: saturate(.7);
+}
+
+
+
+.retro-title,
+.retro-label {
+  color: #fff;
+  text-shadow:
+    0 0 6px rgba(255,255,255,.85),
+    0 0 12px rgba(255,255,255,.45);
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+
+.retro-btn {
+  color: #fff;
+  text-shadow:
+    0 0 4px rgba(255,255,255,.9),
+    0 0 12px rgba(255,255,255,.4);
+}
+
+
+.crt {
+  box-sizing: border-box; 
+  width: 100%;
+  max-width: 100%;
+}
+
+
+html, body, :host { overflow-x: hidden; }
+

@@ -1,0 +1,18 @@
+{
+  "kind": "inode",
+  "diskPath": "/home/afex/Calificacion_MIA/Discos/Disco1.mia",
+  "id": "391A",
+  "index": 0,
+  "type": "unknown",
+  "rawType": 0,
+  "size": 64,
+  "uid": 1,
+  "gid": 1,
+  "perm": "\u0007\u0007\u0005",
+  "permRaw": "BwcF",
+  "atime": "2025-09-01T18:24:21-06:00",
+  "mtime": "2025-09-01T18:24:21-06:00",
+  "ctime": "2025-09-01T18:24:21-06:00",
+  "blocksUsed": 0,
+  "blocks": []
+}

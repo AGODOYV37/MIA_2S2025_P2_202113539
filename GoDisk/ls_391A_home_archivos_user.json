@@ -1,0 +1,23 @@
+{
+  "kind": "ls",
+  "diskPath": "/home/afex/Calificacion_MIA/Discos/Disco1.mia",
+  "id": "391A",
+  "dir": "/home/archivos/user",
+  "items": [
+    {
+      "name": "user",
+      "type": "unknown",
+      "rawType": 0,
+      "inode": 5,
+      "size": 64,
+      "perm": "\u0006\u0006\u0004",
+      "uid": 1,
+      "gid": 1,
+      "owner": "root",
+      "group": "root",
+      "mtime": "2025-09-01T19:43:23-06:00",
+      "atime": "2025-09-01T19:43:23-06:00",
+      "ctime": "2025-09-01T19:43:23-06:00"
+    }
+  ]
+}

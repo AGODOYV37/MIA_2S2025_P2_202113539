@@ -1,0 +1,35 @@
+#-----------------REPORTES PARTE 1-----------------
+#DISCO 1
+#ERROR ID NO ENCONTRADO
+rep -id=A391 -name=mbr
+#REPORTE DISK
+rep -id=391A -name=disk
+#REPORTE MBR 
+rep -id=391A -name=mbr
+#DISCO 3
+#ERROR ID NO ENCONTRADO
+rep -id=393B  -name=mbr
+#REPORTE DISK
+rep -id=391B  -name=disk
+#REPORTE MBR
+rep -id=392B  -name=mbr
+#DISCO 5
+#ERROR ID NO ENCONTRADO
+rep -id=IDx -name=mbr
+#REPORTE DISK
+rep -id=391C  -name=disk
+#REPORTE MBR
+rep -id=391C  -name=mbr
+
+#------------------------REPORTES PARTE 4----------------
+rep -id=391A -name=inodes
+rep -id=391A  -name=block
+rep -id=391A -name=bm_inode
+rep -id=391A  -name=bm_block
+rep -id=391A -name=sb
+rep -id=391A -ruta=/home/archivos/user/docs/Tarea2.txt  -name=file
+mkfile -path=/home/archivos/user/docs/Tarea3.txt -size=10 -cont=/tmp/miarchivo.txt -force
+cat -file1=/home/archivos/user/docs/Tarea3.txt
+rep -id=391A -ruta=/home/archivos/user/docs/Tarea3.txt  -name=file
+rep -id=391A -ruta="/home/archivos/user/docs" -name=ls
+rep -id=391A  -name=tree

@@ -1,0 +1,23 @@
+{
+  "kind": "ls",
+  "diskPath": "/home/afex/USAC/MIA/PROYECTO1/MIA_2S2025_P1_202113539/GoDisk/Discos/disco1.mia",
+  "id": "391A",
+  "dir": "/home/jake/docs",
+  "items": [
+    {
+      "name": "docs",
+      "type": "unknown",
+      "rawType": 0,
+      "inode": 12,
+      "size": 64,
+      "perm": "\u0006\u0006\u0004",
+      "uid": 3,
+      "gid": 3,
+      "owner": "jess",
+      "group": "devs",
+      "mtime": "2025-08-31T19:46:25-06:00",
+      "atime": "2025-08-31T19:46:25-06:00",
+      "ctime": "2025-08-31T19:46:25-06:00"
+    }
+  ]
+}

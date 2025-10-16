@@ -1,0 +1,627 @@
+<h1 class="retro-title">Consola de Comandos</h1>
+
+<label class="retro-label">Entrada de comandos</label>
+<textarea class="crt" [(ngModel)]="entrada" rows="10"></textarea>
+
+<div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
+  <input
+    #smiaInput
+    type="file"
+    accept=".smia,.txt"
+    multiple
+    (change)="onPickSmia($event)"
+    style="position:absolute; left:-9999px; width:0; height:0; opacity:0;"
+    aria-hidden="true"
+    tabindex="-1"
+  >
+
+  <button type="button" class="retro-btn" (click)="openSmia()">Buscar .smia</button>
+
+  <button class="retro-btn" (click)="ejecutar()" [disabled]="cargando || !entrada.trim()">
+    {{ cargando ? 'Ejecutando…' : 'Ejecutar' }}
+  </button>
+</div>
+
+
+
+
+<label class="retro-label">Salida</label>
+<textarea class="crt" [value]="salidaConPrefijo" rows="10" readonly></textarea>
+
+
+
+<!-- Modal MBR: se abre solo si hay datos -->
+<dialog [open]="!!mbr" style="width:min(900px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="margin:0;">Reporte MBR</h3>
+    <button (click)="mbr = null">Cerrar ✕</button>
+  </header>
+
+  <!-- Renderiza contenido solo con datos; sin 'else' para evitar el texto de 'No hay datos…' -->
+  <ng-container *ngIf="mbr as r">
+    <p>
+      <b>Disco:</b> {{ r.diskPath }}<br>
+      <b>Creado:</b> {{ r.created }}<br>
+      <b>Tamaño:</b> {{ r.sizeBytes | number }} bytes<br>
+      <b>Firma:</b> {{ r.signature }} &nbsp;
+      <b>Fit:</b> {{ r.fit }} (0x{{ r.rawFit | number:'1.0-0' }})
+    </p>
+
+    <div style="max-height:60vh;overflow:auto;">
+      <table style="border-collapse:collapse;width:100%;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Status</th>
+            <th>Type</th>
+            <th>Fit</th>
+            <th>Start</th>
+            <th>Size</th>
+            <th>Name</th>
+            <th>Usable</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of r.partitions; trackBy: trackRow">
+            <td>{{ p.index }}</td>
+            <td>{{ p.status }} (0x{{ p.rawStatus | number:'1.0-0' }})</td>
+            <td>{{ p.type }}</td>
+            <td>{{ p.fit }}</td>
+            <td>{{ p.start }}</td>
+            <td>{{ p.size }}</td>
+            <td>{{ p.name }}</td>
+            <td>{{ p.usable ? 'Sí' : 'No' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</dialog>
+
+
+<!-- Modal DISK: se abre si hay datos en this.disk -->
+<dialog [open]="!!disk" style="width:min(1000px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="margin:0;">Reporte DISK</h3>
+    <button (click)="dismissDISK()">Cerrar ✕</button>
+  </header>
+
+  <ng-container *ngIf="disk as d">
+    <p style="margin-top:0;">
+      <b>Disco:</b> {{ d.diskPath }} &nbsp; | &nbsp;
+      <b>Tamaño:</b> {{ d.sizeBytes | number }} bytes &nbsp; | &nbsp;
+      <b>MBR:</b> {{ d.mbrBytes | number }} bytes
+    </p>
+
+
+    <div style="margin:10px 0 6px;"><b>Vista general (bloques proporcionales al %)</b></div>
+    <div class="mosaic" style="margin-bottom:12px;">
+      <div *ngFor="let b of diskBlocks"
+           class="blk"
+           [class.kMBR]="b.kind==='MBR'"
+           [class.kP]="b.kind==='P'"
+           [class.kE]="b.kind==='E'"
+           [class.kL]="b.kind==='L'"
+           [class.kEBR]="b.kind==='EBR'"
+           [class.kFREE]="b.kind==='FREE'"
+           [title]="b.tip"></div>
+    </div>
+
+    <!-- Tabla top-level -->
+    <table style="border-collapse:collapse;width:100%;margin:8px 0;">
+      <thead>
+        <tr>
+          <th>Kind</th><th>Label</th><th>Start</th><th>Size</th><th>End</th><th>%</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let s of d.segments">
+          <td>{{ s.kind }}</td>
+          <td>{{ s.label || s.kind }}</td>
+          <td>{{ s.start }}</td>
+          <td>{{ s.size }}</td>
+          <td>{{ s.end }}</td>
+          <td>{{ s.percent | number:'1.2-2' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+
+    <ng-container *ngIf="d.extended as ev">
+      <h4>Extendida (detalle)</h4>
+      <p style="margin-top:0;">
+        <b>Start:</b> {{ ev.start }} &nbsp; | &nbsp; <b>Size:</b> {{ ev.size }}
+      </p>
+
+
+            <!-- Mosaico general -->
+      <div class="mosaic" [style.--cols]="diskBlocks.length" style="margin-bottom:12px;">
+        <div *ngFor="let b of diskBlocks"
+            class="blk"
+            [class.kMBR]="b.kind==='MBR'"
+            [class.kP]="b.kind==='P'"
+            [class.kE]="b.kind==='E'"
+            [class.kL]="b.kind==='L'"
+            [class.kEBR]="b.kind==='EBR'"
+            [class.kFREE]="b.kind==='FREE'"
+            [title]="b.tip"></div>
+      </div>
+
+      <!-- Mosaico de extendida -->
+      <div class="mosaic" [style.--cols]="extBlocks.length">
+        <div *ngFor="let b of extBlocks"
+            class="blk"
+            [class.kMBR]="b.kind==='MBR'"
+            [class.kP]="b.kind==='P'"
+            [class.kE]="b.kind==='E'"
+            [class.kL]="b.kind==='L'"
+            [class.kEBR]="b.kind==='EBR'"
+            [class.kFREE]="b.kind==='FREE'"
+            [title]="b.tip"></div>
+      </div>
+
+
+      <table style="border-collapse:collapse;width:100%;margin:8px 0;">
+        <thead>
+          <tr>
+            <th>Kind</th><th>Label</th><th>Start</th><th>Size</th><th>End</th><th>% del disco</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of ev.segments">
+            <td>{{ s.kind }}</td>
+            <td>{{ s.label || s.kind }}</td>
+            <td>{{ s.start }}</td>
+            <td>{{ s.size }}</td>
+            <td>{{ s.end }}</td>
+            <td>{{ s.percent | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </ng-container>
+  </ng-container>
+</dialog>
+
+<!-- Modal INODE: aparece si hay datos -->
+<dialog [open]="!!inode" style="width:min(900px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="margin:0;">Reporte INODE</h3>
+    <button (click)="inode = null">Cerrar ✕</button>
+  </header>
+
+  <ng-container *ngIf="inode as inr">
+    <p style="margin-top:0;">
+      <b>Disco:</b> {{ inr.diskPath }} &nbsp; | &nbsp;
+      <b>ID:</b> {{ inr.id }} &nbsp; | &nbsp;
+      <b>Inodo #</b> {{ inr.index }} &nbsp; | &nbsp;
+      <b>Tipo:</b> {{ inr.type }} (raw={{ inr.rawType }}) &nbsp; | &nbsp;
+      <b>Tam:</b> {{ inr.size | number }} bytes
+    </p>
+    <p class="small">
+      <b>UID/GID:</b> {{ inr.uid }}/{{ inr.gid }} &nbsp; | &nbsp;
+      <b>Perm:</b> {{ inr.perm }} &nbsp; | &nbsp;
+      <b>ATime:</b> {{ inr.atime }} &nbsp; | &nbsp;
+      <b>MTime:</b> {{ inr.mtime }} &nbsp; | &nbsp;
+      <b>CTime:</b> {{ inr.ctime }}
+    </p>
+
+    <h4 style="margin:8px 0;">Bloques (agrupados por corridas contiguas)</h4>
+    <div class="inode-mosaic">
+      <ng-container *ngFor="let run of inodeRuns; let i = index">
+        <div class="run">
+          <div class="blk" *ngFor="let b of run" [title]="'Bloque '+b">{{ b }}</div>
+        </div>
+        <div class="run-gap" *ngIf="i < inodeRuns.length - 1">⟶</div>
+      </ng-container>
+      <div *ngIf="!inodeRuns.length" class="small">(sin punteros)</div>
+    </div>
+  </ng-container>
+</dialog>
+
+<dialog [open]="showInodes" style="width:min(980px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="margin:0;">Explorador de Inodos</h3>
+    <button (click)="closeInodes()">Cerrar ✕</button>
+  </header>
+
+  <div *ngIf="!inodesChain.length" style="color:#666;font-size:12px;">
+    (sin nodos para mostrar)
+  </div>
+
+  <div *ngIf="inodesChain.length"
+       style="display:flex;gap:12px;align-items:flex-start;overflow:auto;padding:4px;">
+    <ng-container *ngFor="let n of inodesChain; let last = last">
+      <div style="min-width:220px;border:1px solid #ccc;border-radius:10px;padding:10px;">
+        <h4 style="margin:0 0 6px 0;">Inodo {{ n.index }}</h4>
+        <ul style="padding-left:18px; margin:0;">
+          <li>i_uid {{ n.uid }}</li>
+          <li>i_size {{ n.size }}</li>
+          <li>i_atime {{ n.atime }}</li>
+          <li *ngFor="let b of (n.blocks||[]); index as k">i_block_{{k+1}} {{ b }}</li>
+          <li>i_perm {{ n.perm }}</li>
+        </ul>
+      </div>
+      <div *ngIf="!last" style="align-self:center;font-size:22px;">→</div>
+    </ng-container>
+  </div>
+</dialog>
+
+<!-- ===== MODAL: BLOCKS (CORREGIDO) ===== -->
+<dialog [open]="showBlocks" style="width:min(1100px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="margin:0;">Explorador de Bloques</h3>
+    <button (click)="dismissBLOCKS()">Cerrar ✕</button>
+  </header>
+
+  <ng-container *ngIf="blocks as b; else noBlocks">
+    <p style="margin:4px 0 12px 0;color:#555;font-size:12px">
+      <b>Disco:</b> {{ b.diskPath }} &nbsp;|&nbsp;
+      <b>ID:</b> {{ b.id }} &nbsp;|&nbsp;
+      <b>BlockSize:</b> {{ b.blockSize }} &nbsp;|&nbsp;
+      <b>Usados:</b> {{ b.used }} / {{ b.count }}
+    </p>
+
+    <!-- Cadena de tarjetas con flechas -->
+    <div style="display:flex; gap:12px; align-items:stretch; overflow:auto; padding:6px; border:1px solid #ddd; border-radius:8px;">
+      <ng-container *ngFor="let bi of blocksFlow; let last = last">
+        <div style="min-width:220px; max-width:220px; border:1px solid #ccc; border-radius:8px; padding:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <strong>Bloque {{ bi.index }}</strong>
+            <span
+              [style.background]="bi.type==='dir' ? '#e0f2fe' : (bi.type==='file' ? '#dcfce7' : (bi.type==='ptr' ? '#ede9fe' : '#eee'))"
+              style="border-radius:10px; padding:2px 8px; font-size:12px; border:1px solid #ddd;"
+            >{{ bi.type }}</span>
+          </div>
+
+          <div style="font-size:12px; color:#444; margin-bottom:6px;">
+            <b>Refs:</b> {{ bi.refCount }}
+          </div>
+
+          <div style="font-size:12px; color:#333;">
+            <ng-container [ngSwitch]="bi.type">
+
+              <!-- DIR -->
+              <ng-container *ngSwitchCase="'dir'">
+                <ng-container *ngIf="bi.dir?.entries as ents; else noDir">
+                  <div *ngFor="let e of ents" style="display:flex; justify-content:space-between;">
+                    <span>{{ e.name }}</span><code>#{{ e.inode }}</code>
+                  </div>
+                </ng-container>
+                <ng-template #noDir><em>(sin entradas)</em></ng-template>
+              </ng-container>
+
+              <!-- FILE -->
+              <ng-container *ngSwitchCase="'file'">
+                <ng-container *ngIf="bi.file as f; else noFile">
+                  <div><b>Tamaño:</b> {{ f.size }}</div>
+                  <div style="margin-top:4px; background:#f7f7f7; padding:6px; border-radius:4px; max-height:72px; overflow:auto;">
+                    <code style="white-space:pre-wrap">{{ f.preview || '(sin vista previa)' }}</code>
+                  </div>
+                </ng-container>
+                <ng-template #noFile><em>(sin preview)</em></ng-template>
+              </ng-container>
+
+              <!-- PTR -->
+              <ng-container *ngSwitchCase="'ptr'">
+                <ng-container *ngIf="bi.ptr?.pointers as ptrs; else noPtr">
+                  <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                    <code *ngFor="let p of ptrs">#{{ p }}</code>
+                  </div>
+                </ng-container>
+                <ng-template #noPtr><em>(sin punteros válidos)</em></ng-template>
+              </ng-container>
+
+              <!-- DEFAULT -->
+              <ng-container *ngSwitchDefault>
+                <em>(tipo desconocido)</em>
+              </ng-container>
+
+            </ng-container>
+          </div>
+        </div>
+
+        <!-- Flecha entre tarjetas -->
+        <div *ngIf="!last" style="align-self:center; font-size:18px; color:#777;">→</div>
+      </ng-container>
+    </div>
+  </ng-container>
+
+  <ng-template #noBlocks>
+    <p>(sin datos de bloques)</p>
+  </ng-template>
+</dialog>
+
+<!-- ===== MODAL: BM_INODE ===== -->
+<dialog [open]="showBmInode" style="width:min(900px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="margin:0;">Bitmap de Inodos (bm_inode)</h3>
+    <button (click)="dismissBmInode()">Cerrar ✕</button>
+  </header>
+
+  <div *ngIf="bmInodeText as txt; else noBmI" style="max-height:60vh;overflow:auto;">
+    <pre style="margin:0; padding:12px; border-radius:8px;
+                background:#0b1220; color:#9ef01a; 
+                font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono','Courier New', monospace;
+                line-height:1.45; font-size:13px; white-space:pre-wrap;">
+{{ txt }}
+    </pre>
+  </div>
+  <ng-template #noBmI>
+    <p>(sin datos para mostrar)</p>
+  </ng-template>
+</dialog>
+
+
+<!-- ===== MODAL: BM_BLOCK ===== -->
+<dialog [open]="showBmBlock" style="width:min(900px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="margin:0;">Bitmap de Bloques (bm_block)</h3>
+    <button (click)="dismissBmBlock()">Cerrar ✕</button>
+  </header>
+
+  <div *ngIf="bmBlockText as txt; else noBmB" style="max-height:60vh;overflow:auto;">
+    <pre style="margin:0; padding:12px; border-radius:8px;
+                background:#0b1220; color:#00d4ff;
+                font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono','Courier New', monospace;
+                line-height:1.45; font-size:13px; white-space:pre-wrap;">
+{{ txt }}
+    </pre>
+  </div>
+  <ng-template #noBmB>
+    <p>(sin datos para mostrar)</p>
+  </ng-template>
+</dialog>
+
+
+<!-- ===== MODAL: TREE ===== -->
+<dialog [open]="showTree" style="width:min(1100px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <div>
+      <h3 style="margin:0;">Árbol (tree)</h3>
+      <div style="color:#666;font-size:12px;">
+        <b>Disco:</b> {{ tree?.diskPath }} &nbsp;|&nbsp;
+        <b>ID:</b> {{ tree?.id }} &nbsp;|&nbsp;
+        <b>BlockSize:</b> {{ tree?.blockSize }}
+      </div>
+    </div>
+    <button (click)="dismissTREE()">Cerrar ✕</button>
+  </header>
+
+  <!-- Layout en dos columnas: izquierda = lista de inodos; derecha = detalle del seleccionado -->
+  <div style="display:grid; grid-template-columns: 280px 1fr; gap:14px; align-items:start;">
+
+    <!-- IZQUIERDA: LISTA DE INODOS -->
+    <div style="border:1px solid #ddd; border-radius:10px; padding:10px; max-height:70vh; overflow:auto;">
+      <div style="font-weight:600; margin-bottom:8px;">Inodos</div>
+
+      <!-- Búsqueda simple (opcional) — puedes quitarlo si no lo usas
+      <input placeholder="filtrar…" [(ngModel)]="inodeFilter" style="width:100%; padding:6px; margin-bottom:8px;">
+      -->
+
+      <div *ngFor="let n of (tree?.nodes || [])" style="display:flex; gap:8px; align-items:center; padding:6px 4px; border-bottom:1px dashed #eee;">
+        <!-- Radio para selección única -->
+        <input type="radio"
+               name="inodeSel"
+               [checked]="n.index === treeSel"
+               (change)="selectTreeInode(n.index)">
+
+        <div style="line-height:1.2;">
+          <div><b>#{{ n.index }}</b> — {{ n.type }}</div>
+          <small style="color:#666;">size {{ n.size }}B &nbsp;•&nbsp; uid/gid {{ n.uid }}/{{ n.gid }}</small>
+        </div>
+      </div>
+      <div *ngIf="!(tree?.nodes?.length)" style="color:#888;font-size:12px;">(sin inodos)</div>
+    </div>
+
+    <!-- DERECHA: DETALLE DEL INODO SELECCIONADO -->
+    <div *ngIf="treeNode as n; else noNode">
+      <!-- Ficha del inodo -->
+      <div style="border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:12px;">
+        <h4 style="margin:0 0 6px 0;">inode {{ n.index }}</h4>
+        <div style="font-size:12px;color:#444">
+          <div><b>tipo:</b> {{ n.type }} (raw {{ n.rawType }})</div>
+          <div><b>size:</b> {{ n.size }}</div>
+          <div><b>uid/gid:</b> {{ n.uid }}/{{ n.gid }}</div>
+          <div><b>perm:</b> {{ n.perm }}</div>
+        </div>
+
+        <!-- Hijos (si es directorio) -->
+        <div *ngIf="edgesFrom(n.index)?.length" style="margin-top:10px;">
+          <div style="font-weight:600;margin-bottom:4px;">Entradas (dir):</div>
+          <ul style="margin:0;padding-left:18px;max-height:140px;overflow:auto;">
+            <li *ngFor="let e of edgesFrom(n.index)">
+              <a href="javascript:void(0)" (click)="selectTreeInode(e.child)">{{ e.name }}</a>
+              <span style="color:#666">→ inode {{ e.child }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- TARJETAS DE BLOQUES DIRECTOS (con contenido) -->
+      <div>
+        <div style="font-weight:600;margin-bottom:6px;">Bloques directos</div>
+        <div style="display:flex; flex-wrap:wrap; gap:12px;">
+          <div *ngFor="let c of (n.directCards || [])"
+               style="min-width:240px; max-width:280px; border:1px solid #ccc; border-radius:8px; padding:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <strong>Bloque {{ c.index }}</strong>
+              <span
+                [style.background]="c.type==='dir' ? '#e0f2fe' : '#dcfce7'"
+                style="border-radius:10px; padding:2px 8px; font-size:12px; border:1px solid #ddd;">
+                {{ c.type }}
+              </span>
+            </div>
+
+            <ng-container [ngSwitch]="c.type">
+              <!-- Carpeta -->
+              <ng-container *ngSwitchCase="'dir'">
+                <div *ngIf="(c.dir?.entries?.length || 0) > 0; else noEnts" style="font-size:12px;">
+                  <div *ngFor="let e of (c.dir?.entries || [])" style="display:flex; justify-content:space-between;">
+                    <span>{{ e.name }}</span><code>#{{ e.inode }}</code>
+                  </div>
+                </div>
+                <ng-template #noEnts><em style="color:#666;">(sin entradas)</em></ng-template>
+              </ng-container>
+
+              <!-- Archivo -->
+              <ng-container *ngSwitchCase="'file'">
+                <div style="font-size:12px;color:#444;"><b>Tamaño (inode):</b> {{ n.size }}</div>
+                <div style="margin-top:6px; background:#f7f7f7; padding:6px; border-radius:4px; max-height:100px; overflow:auto;">
+                  <code style="white-space:pre-wrap">{{ c.file?.preview || '(sin vista previa)' }}</code>
+                </div>
+              </ng-container>
+
+              <!-- Otros -->
+              <ng-container *ngSwitchDefault>
+                <em style="color:#666;">(tipo desconocido)</em>
+              </ng-container>
+            </ng-container>
+          </div>
+          <div *ngIf="!(n.directCards?.length)" style="color:#888;font-size:12px;">(sin bloques directos)</div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noNode>
+      <div style="color:#888; font-size:12px;">(selecciona un inodo de la lista)</div>
+    </ng-template>
+  </div>
+</dialog>
+
+
+<!-- ===== MODAL: SUPERBLOCK (SB) ===== -->
+<dialog [open]="!!sb" style="width:min(780px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="margin:0;">Superblock</h3>
+    <button (click)="dismissSB()">Cerrar ✕</button>
+  </header>
+
+  <ng-container *ngIf="sb as r">
+    <p style="margin:0 0 8px 0;color:#555;font-size:12px">
+      <b>Disco:</b> {{ r.diskPath }} &nbsp;|&nbsp;
+      <b>ID:</b> {{ r.id }}
+    </p>
+
+    <table style="border-collapse:collapse;width:100%;">
+      <tbody>
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">BlockSize</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.blockSize }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">InodesCount</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.inodesCount }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">BlocksCount</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.blocksCount }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">FreeInodes (bitmap)</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.bitmapFreeInodes }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">FreeBlocks (bitmap)</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.bitmapFreeBlocks }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">UsedInodes (bitmap)</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.bitmapUsedInodes }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">UsedBlocks (bitmap)</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.bitmapUsedBlocks }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">InodeSize</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.inodeSize }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">BmInodeStart</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.bmInodeStart }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">BmBlockStart</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.bmBlockStart }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">InodeTableStart</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.inodeTableStart }}</td></tr>
+
+        <tr><th style="text-align:left;background:#f5f5f5;border:1px solid #ccc;padding:.4rem .6rem;">BlockStart</th>
+            <td style="border:1px solid #ccc;padding:.4rem .6rem;">{{ r.blockStart }}</td></tr>
+      </tbody>
+    </table>
+  </ng-container>
+</dialog>
+
+
+<!-- ===== MODAL: LS ===== -->
+<dialog [open]="!!ls" style="width:min(980px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <div>
+      <h3 style="margin:0 0 6px 0;">Reporte LS</h3>
+      <ng-container *ngIf="ls as L">
+        <div class="ls-meta">
+          <span><b>Disco:</b> {{ L.diskPath }}</span>
+          <span><b>ID:</b> {{ L.id }}</span>
+          <span><b>Ruta:</b> {{ L.dir }}</span>
+          <span><b>Items:</b> {{ L.items.length || 0 }}</span>
+        </div>
+      </ng-container>
+    </div>
+    <button (click)="dismissLS()">Cerrar ✕</button>
+  </header>
+
+  <ng-container *ngIf="ls as L">
+    <div class="ls-wrap">
+      <table class="ls-table">
+        <thead>
+          <tr>
+            <th style="min-width:220px;">Nombre</th>
+            <th>Tipo</th>
+            <th class="num">Inodo</th>
+            <th class="num">Tamaño</th>
+            <th class="mono">Permisos</th>
+            <th class="num">UID</th>
+            <th>Owner</th>
+            <th class="num">GID</th>
+            <th>Group</th>
+            <th>Modificado</th>
+            <th>Creado</th>
+            <th>Accedido</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let it of lsItemsSorted; trackBy: trackLS">
+            <td>
+              <span [class.badge-dir]="it.type==='dir'"
+                    [class.badge-file]="it.type==='file'"
+                    [class.badge-other]="it.type!=='dir' && it.type!=='file'"
+                    class="badge-dot"></span>
+              <span>{{ it.name }}</span>
+            </td>
+            <td>
+              <span class="type-chip"
+                    [class.tc-dir]="it.type==='dir'"
+                    [class.tc-file]="it.type==='file'"
+                    [class.tc-other]="it.type!=='dir' && it.type!=='file'">
+                {{ it.type }}
+              </span>
+            </td>
+            <td class="num">#{{ it.inode }}</td>
+            <td class="num">{{ it.size | number }}</td>
+            <td class="mono">{{ it.perm }}</td>
+            <td class="num">{{ it.uid }}</td>
+            <td>{{ it.owner || '—' }}</td>
+            <td class="num">{{ it.gid }}</td>
+            <td>{{ it.group || '—' }}</td>
+            <td>{{ it.mtime || '—' }}</td>
+            <td>{{ it.ctime || '—' }}</td>
+            <td>{{ it.atime || '—' }}</td>
+          </tr>
+        <tr *ngIf="L.items.length === 0">
+          <td colspan="12" style="text-align:center;color:#666;padding:16px;">(directorio vacío)</td>
+        </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</dialog>
+
+
+
+
+
+
+

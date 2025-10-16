@@ -1,0 +1,68 @@
+{
+  "kind": "mbr",
+  "diskPath": "/home/afex/Calificacion_MIA/Discos/Disco3.mia",
+  "created": "2025-09-01T21:48:02-06:00",
+  "sizeBytes": 13631488,
+  "signature": 613105754447840447,
+  "fit": "FF",
+  "rawFit": 102,
+  "partitions": [
+    {
+      "index": 0,
+      "status": "1",
+      "type": "P",
+      "fit": "WF",
+      "rawStatus": 49,
+      "rawType": 80,
+      "rawFit": 87,
+      "start": 197,
+      "size": 4194304,
+      "name": "Part31",
+      "id": "391B",
+      "correlative": 1,
+      "usable": true
+    },
+    {
+      "index": 1,
+      "status": "1",
+      "type": "P",
+      "fit": "WF",
+      "rawStatus": 49,
+      "rawType": 80,
+      "rawFit": 87,
+      "start": 4194501,
+      "size": 4194304,
+      "name": "Part32",
+      "id": "392B",
+      "correlative": 2,
+      "usable": true
+    },
+    {
+      "index": 2,
+      "status": "1",
+      "type": "P",
+      "fit": "WF",
+      "rawStatus": 49,
+      "rawType": 80,
+      "rawFit": 87,
+      "start": 8388805,
+      "size": 1048576,
+      "name": "Part33",
+      "usable": true
+    },
+    {
+      "index": 3,
+      "status": "0",
+      "type": "\u0000",
+      "fit": "",
+      "rawStatus": 48,
+      "rawType": 0,
+      "rawFit": 0,
+      "start": -1,
+      "size": 0,
+      "name": "",
+      "correlative": -1,
+      "usable": false
+    }
+  ]
+}
