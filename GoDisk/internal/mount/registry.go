@@ -179,3 +179,18 @@ func (r *Registry) MountedCount() int {
 	}
 	return total
 }
+
+func (r *Registry) PurgeDiskIfEmpty(diskPath string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	md, ok := r.disks[diskPath]
+	if !ok {
+		return false
+	}
+	if len(md.byName) == 0 {
+		delete(r.used, md.Letter)
+		delete(r.disks, diskPath)
+		return true
+	}
+	return false
+}

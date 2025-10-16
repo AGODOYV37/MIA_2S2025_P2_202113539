@@ -518,6 +518,43 @@ func (a *App) ProcessLine(line string) string {
 				fmt.Println(line)
 			}
 
+		case "unmount":
+			fs := flag.NewFlagSet("unmount", flag.ContinueOnError)
+			fs.SetOutput(io.Discard)
+			id := fs.String("id", "", "ID de partición montada (p.ej. 39A1)")
+			path := fs.String("path", "", "Ruta del disco (.mia)")
+			name := fs.String("name", "", "Nombre de la partición (primaria)")
+			if err := fs.Parse(args); err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			switch {
+			case strings.TrimSpace(*id) != "":
+				if err := a.svc.UnmountByID(*id); err != nil {
+					if mount.IsIDNotFound(err) {
+						fmt.Printf("Error: ID %q no está montado.\n", *id)
+					} else {
+						fmt.Println("Error:", err)
+					}
+				} else {
+					fmt.Printf("Desmontado ID=%s\n", *id)
+				}
+			case strings.TrimSpace(*path) != "" && strings.TrimSpace(*name) != "":
+				if err := a.svc.UnmountByPathName(*path, *name); err != nil {
+					switch {
+					case mount.IsPartitionNotFound(err):
+						fmt.Printf("Error: la partición %q no está montada en %s.\n", *name, *path)
+					default:
+						fmt.Println("Error:", err)
+					}
+				} else {
+					fmt.Printf("Desmontada %q en %s\n", *name, *path)
+				}
+			default:
+				fmt.Println("uso: unmount -id=<ID>  |  unmount -path=\"/ruta/d1.mia\" -name=\"Part1\"")
+			}
+			return
+
 		case "mkfs":
 			fs := flag.NewFlagSet("mkfs", flag.ContinueOnError)
 			fs.SetOutput(io.Discard)

@@ -1,6 +1,7 @@
 package mount
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -83,4 +84,47 @@ func (s *Service) DebugString() string {
 		return "(sin particiones montadas)"
 	}
 	return fmt.Sprintf("mounted: %s", line)
+}
+
+// Unmount por ID (recomendado)
+func (s *Service) UnmountByID(id string) error {
+	mp, ok := s.reg.RemoveByID(id)
+	if !ok {
+		return ErrIDNotFound
+	}
+	// limpia Part_id y Part_correlative en el MBR
+	if err := clearMBRMountMeta(mp.DiskPath, mp.PartName); err != nil {
+		return Wrap(ErrMBRWrite, "unmount: %v", err)
+	}
+	// si ya no quedan particiones montadas de ese disco, libera la letra
+	_ = s.reg.PurgeDiskIfEmpty(mp.DiskPath)
+	return nil
+}
+
+// Unmount por path+name (atajo que resuelve al ID)
+func (s *Service) UnmountByPathName(path, name string) error {
+	if mp, ok := s.reg.IsMounted(path, name); ok {
+		return s.UnmountByID(mp.ID)
+	}
+	return ErrPartitionNotFound
+}
+
+func clearMBRMountMeta(diskPath, partName string) error {
+	mbr, err := diskio.ReadMBR(diskPath)
+	if err != nil {
+		return err
+	}
+	for i := range mbr.Mbr_partitions {
+		p := &mbr.Mbr_partitions[i]
+		name := string(bytes.TrimRight(p.Part_name[:], "\x00"))
+		if name == partName {
+			// borrar ID y correlativo para que no se "rehidrate" como montada
+			for i := range p.Part_id {
+				p.Part_id[i] = 0
+			}
+			p.Part_correlative = 0
+			return diskio.WriteMBR(diskPath, mbr)
+		}
+	}
+	return ErrPartitionNotFound
 }
