@@ -17,6 +17,7 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/catalog"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/commands"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext2"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext3"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/reports"
 	u "github.com/AGODOYV37/MIA_2S2025_P2_202113539/pkg"
@@ -558,24 +559,37 @@ func (a *App) ProcessLine(line string) string {
 		case "mkfs":
 			fs := flag.NewFlagSet("mkfs", flag.ContinueOnError)
 			fs.SetOutput(io.Discard)
-			id := fs.String("id", "", "ID de partición montada (p.ej. 391A)")
+			id := fs.String("id", "", "ID de partición montada (p.ej. 39A1)")
 			typ := fs.String("type", "full", "Tipo de formateo (solo 'full')")
+			fstype := fs.String("fs", "ext2", "Sistema de archivos: ext2|ext3 (default ext2)")
 			if err := fs.Parse(args); err != nil {
 				fmt.Println("Error:", err)
 				return
 			}
 			if strings.TrimSpace(*id) == "" {
-				fmt.Println("uso: mkfs -id=<ID> [-type=full]")
+				fmt.Println("uso: mkfs -id=<ID> [-type=full] [-fs=ext2|ext3]")
 				return
 			}
 			if strings.ToLower(strings.TrimSpace(*typ)) != "full" {
 				fmt.Println("Aviso: solo se implementa -type=full; se usará full.")
 			}
-			if err := a.formatter.MkfsFull(*id); err != nil {
-				fmt.Println("Error:", err)
-				return
+
+			switch strings.ToLower(strings.TrimSpace(*fstype)) {
+			case "ext3":
+				// nuevo formateador EXT3
+				if err := ext3.NewFormatter(a.reg).MkfsFull(*id); err != nil {
+					fmt.Println("Error:", err)
+					return
+				}
+				fmt.Println("mkfs: formateo EXT3 completado en", *id)
+			default:
+				// ext2 por defecto
+				if err := a.formatter.MkfsFull(*id); err != nil {
+					fmt.Println("Error:", err)
+					return
+				}
+				fmt.Println("mkfs: formateo EXT2 completado en", *id)
 			}
-			fmt.Println("mkfs: formateo EXT2 completado en", *id)
 
 		case "login":
 			_ = commands.CmdLogin(a.reg, args)
