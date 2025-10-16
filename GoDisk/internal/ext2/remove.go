@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
@@ -208,7 +207,7 @@ func deleteNode(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []byte, 
 	}
 
 	// 3) Quitar la entrada del padre
-	if err := removeDirEntry(mp, sb, parentIno, name); err != nil {
+	if err := removeDirEntry(mp, *sb, parentIno, name); err != nil {
 		return err
 	}
 
@@ -222,34 +221,4 @@ func deleteNode(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []byte, 
 		return err
 	}
 	return nil
-}
-
-func removeDirEntry(mp *mount.MountedPartition, sb *SuperBloque, dirIno int32, name string) error {
-	if name == "" || !utf8.ValidString(name) {
-		return fmt.Errorf("removeDirEntry: nombre inválido")
-	}
-	ino, err := readInodeAt(mp, *sb, dirIno)
-	if err != nil {
-		return err
-	}
-	for _, ptr := range ino.IBlock {
-		if ptr < 0 {
-			continue
-		}
-		bf, err := readFolderBlockAt(mp, *sb, ptr)
-		if err != nil {
-			return err
-		}
-		for i := 0; i < 4; i++ {
-			if trimNull(bf.BContent[i].BName[:]) == name && bf.BContent[i].BInodo >= 0 {
-				// borrar
-				for j := range bf.BContent[i].BName {
-					bf.BContent[i].BName[j] = 0
-				}
-				bf.BContent[i].BInodo = -1
-				return writeFolderBlockAt(mp, *sb, ptr, bf)
-			}
-		}
-	}
-	return fmt.Errorf("remove: entrada '%s' no encontrada en padre", name)
 }
