@@ -21,8 +21,8 @@ func Find(reg *mount.Registry, id, startPath, pattern string, uid, gid int, isRo
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return nil, fmt.Errorf("find: leyendo SB: %w", err)
 	}
-	if sb.SFilesystemType != FileSystemType || sb.SMagic != MagicEXT2 {
-		return nil, errors.New("find: la partición no es EXT2 válida (SB)")
+	if err := requireSupportedFS(sb, "find"); err != nil {
+		return nil, err
 	}
 
 	startPath = path.Clean(strings.TrimSpace(startPath))

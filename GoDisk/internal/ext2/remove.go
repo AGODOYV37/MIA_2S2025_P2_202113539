@@ -22,8 +22,8 @@ func Remove(reg *mount.Registry, id, absPath string, uid, gid int) error {
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return fmt.Errorf("remove: leyendo SB: %w", err)
 	}
-	if sb.SFilesystemType != FileSystemType || sb.SMagic != MagicEXT2 {
-		return errors.New("remove: la partición no es EXT2 válida (SB)")
+	if err := requireSupportedFS(sb, "remove"); err != nil {
+		return err
 	}
 
 	// Parse path

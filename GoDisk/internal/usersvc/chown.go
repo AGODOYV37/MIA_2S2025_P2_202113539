@@ -26,12 +26,10 @@ func Chown(reg *mount.Registry, path, newUser string, recursive bool) error {
 		return errors.New("chown: requiere sesión (login)")
 	}
 
-	// Aplica el cambio de propietario (root: cualquiera; no-root: solo propios)
 	if err := ext2.Chown(reg, s.ID, path, newUser, recursive, s.UID, s.GID, s.IsRoot); err != nil {
 		return err
 	}
 
-	// Journal (solo EXT3; no interrumpe si falla)
 	_ = ext3.AppendJournalIfExt3(reg, s.ID, "CHOWN", path, fmt.Sprintf("usuario=%s recursive=%t", newUser, recursive))
 
 	return nil

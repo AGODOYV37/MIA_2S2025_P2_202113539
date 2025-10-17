@@ -17,8 +17,13 @@ func ReadUsersText(reg *mount.Registry, id string) (string, error) {
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return "", fmt.Errorf("users: leyendo SB: %w", err)
 	}
-	if sb.SFilesystemType != FileSystemType || sb.SMagic != MagicEXT2 {
-		return "", errors.New("users: la partición no parece EXT2 válida")
+
+	// ✅ Aceptar EXT2 (2) o EXT3 (3), con el mismo magic 0xEF53
+	if sb.SMagic != MagicEXT2 {
+		return "", errors.New("users: la partición no parece EXT2/EXT3 válida (magic)")
+	}
+	if sb.SFilesystemType != FileSystemType && sb.SFilesystemType != 3 {
+		return "", errors.New("users: la partición no parece EXT2/EXT3 válida (tipo)")
 	}
 
 	root, err := readInodeAt(mp, sb, 0)

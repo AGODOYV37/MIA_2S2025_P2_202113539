@@ -2,10 +2,11 @@ package ext2
 
 // Constantes del FS
 const (
-	BlockSize        = 64
-	FileSystemType   = 2
-	MagicEXT2        = 0xEF53
-	InodeDirectCount = 15
+	BlockSize          = 64
+	FileSystemType     = 2
+	FileSystemTypeEXT3 = 3
+	MagicEXT2          = 0xEF53
+	InodeDirectCount   = 15
 )
 
 // SuperBloque

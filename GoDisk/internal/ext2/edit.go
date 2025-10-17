@@ -20,8 +20,8 @@ func EditFile(reg *mount.Registry, id, absPath string, data []byte, uid, gid int
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return fmt.Errorf("edit: leyendo SB: %w", err)
 	}
-	if sb.SFilesystemType != FileSystemType || sb.SMagic != MagicEXT2 {
-		return errors.New("edit: la partición no es EXT2 válida (SB)")
+	if err := requireSupportedFS(sb, "edit"); err != nil {
+		return err
 	}
 
 	// Parsear ruta: /a/b/c.txt  => parent=/a/b  name=c.txt

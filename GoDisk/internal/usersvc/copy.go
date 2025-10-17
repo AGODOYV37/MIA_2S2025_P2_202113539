@@ -30,7 +30,7 @@ func Copy(reg *mount.Registry, path, destino string) error {
 		return err
 	}
 
-	_ = ext3.AppendJournalIfExt3(reg, s.ID, "COPY", path, destino)
-
+	_ = ext3.AppendJournalIfExt3(reg, s.ID, "COPY", path, "dest="+destino)
 	return nil
+
 }

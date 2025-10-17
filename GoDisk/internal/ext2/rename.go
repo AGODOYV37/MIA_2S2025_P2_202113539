@@ -19,8 +19,8 @@ func RenameNode(reg *mount.Registry, id, absPath, newName string, uid, gid int, 
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return fmt.Errorf("rename: leyendo SB: %w", err)
 	}
-	if sb.SFilesystemType != FileSystemType || sb.SMagic != MagicEXT2 {
-		return errors.New("rename: la partición no es EXT2 válida (SB)")
+	if err := requireSupportedFS(sb, "rename"); err != nil {
+		return err
 	}
 
 	comps, err := splitPath(absPath)

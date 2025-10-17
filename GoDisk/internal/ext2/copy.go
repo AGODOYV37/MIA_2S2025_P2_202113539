@@ -21,8 +21,8 @@ func CopyNode(reg *mount.Registry, id, srcPath, destDir string, uid, gid int, is
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return fmt.Errorf("copy: leyendo SB: %w", err)
 	}
-	if sb.SFilesystemType != FileSystemType || sb.SMagic != MagicEXT2 {
-		return errors.New("copy: la partición no es EXT2 válida (SB)")
+	if err := requireSupportedFS(sb, "copy"); err != nil {
+		return err
 	}
 
 	// --- Origen ---

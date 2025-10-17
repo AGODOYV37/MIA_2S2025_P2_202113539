@@ -19,8 +19,9 @@ func CreateOrOverwriteFile(reg *mount.Registry, id, absPath string, data []byte,
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return fmt.Errorf("mkfile: leyendo SB: %w", err)
 	}
-	if sb.SFilesystemType != FileSystemType || sb.SMagic != MagicEXT2 {
-		return errors.New("mkfile: la partición no es EXT2 válida (SB)")
+
+	if err := requireSupportedFS(sb, "mkfile"); err != nil {
+		return err
 	}
 
 	comps, err := splitPath(absPath)

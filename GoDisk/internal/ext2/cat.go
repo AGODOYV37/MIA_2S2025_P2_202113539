@@ -18,8 +18,9 @@ func ReadFileByPath(reg *mount.Registry, id, absPath string) (Inodo, []byte, err
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return Inodo{}, nil, fmt.Errorf("cat: leyendo SB: %w", err)
 	}
-	if sb.SFilesystemType != FileSystemType || sb.SMagic != MagicEXT2 {
-		return Inodo{}, nil, errors.New("cat: la partición no es EXT2 válida (SB)")
+
+	if err := requireSupportedFS(sb, "cat"); err != nil {
+		return Inodo{}, nil, err
 	}
 
 	// Ruta -> componentes

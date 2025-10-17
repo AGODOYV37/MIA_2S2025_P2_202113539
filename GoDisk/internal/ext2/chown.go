@@ -24,8 +24,8 @@ func Chown(reg *mount.Registry, id, startPath, newUser string, recursive bool, a
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return fmt.Errorf("chown: leyendo SB: %w", err)
 	}
-	if sb.SFilesystemType != FileSystemType || sb.SMagic != MagicEXT2 {
-		return errors.New("chown: la partición no es EXT2 válida (SB)")
+	if err := requireSupportedFS(sb, "chown"); err != nil {
+		return err
 	}
 
 	startPath = path.Clean(strings.TrimSpace(startPath))
