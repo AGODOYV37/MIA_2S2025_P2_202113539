@@ -20,6 +20,7 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext3"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/reports"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/usersvc"
 	u "github.com/AGODOYV37/MIA_2S2025_P2_202113539/pkg"
 )
 
@@ -627,6 +628,33 @@ func (a *App) ProcessLine(line string) string {
 			_ = commands.CmdFind(a.reg, args)
 		case "chown":
 			_ = commands.CmdChown(a.reg, args)
+		case "chmod":
+			fs := flag.NewFlagSet("chmod", flag.ContinueOnError)
+			fs.SetOutput(io.Discard)
+			path := fs.String("path", "", "Ruta absoluta del archivo o carpeta")
+			ugo := fs.String("ugo", "", "Permisos UGO en octal (ej. 764)")
+			rec := fs.Bool("r", false, "Aplicar recursivo (solo nodos propiedad del usuario actual)")
+			if err := fs.Parse(args); err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			if strings.TrimSpace(*path) == "" || !strings.HasPrefix(*path, "/") {
+				fmt.Println("chmod: -path inválido (debe ser absoluto)")
+				return
+			}
+			if strings.TrimSpace(*ugo) == "" {
+				fmt.Println("chmod: -ugo requerido (formato 3 dígitos 0..7)")
+				return
+			}
+			if err := usersvc.Chmod(a.reg, *path, *ugo, *rec); err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Printf("chmod: aplicado %s a %s", *ugo, *path)
+			if *rec {
+				fmt.Print(" (recursivo)")
+			}
+			fmt.Println()
 
 		default:
 			fmt.Printf("Comando '%s' no reconocido.\n", command)
