@@ -20,8 +20,8 @@ type Information struct {
 // j_count: contador (ordinal) de la entrada
 // j_content: información asociada
 type Journal struct {
-	J_count   int32
-	J_content Information
+	JCount   int32
+	JContent Information
 }
 
 // ----------------- Helpers opcionales -----------------
@@ -39,8 +39,8 @@ func NewInformation(operation, path, content string, when time.Time) Information
 // NewJournal crea una entrada Journal con contador y contenido dados.
 func NewJournal(count int32, info Information) Journal {
 	return Journal{
-		J_count:   count,
-		J_content: info,
+		JCount:   count,
+		JContent: info,
 	}
 }
 

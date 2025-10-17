@@ -6,6 +6,7 @@ import (
 
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/auth"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext2"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext3"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
@@ -20,5 +21,11 @@ func Edit(reg *mount.Registry, path string, data []byte) error {
 		return errors.New("edit: requiere sesión (login)")
 	}
 
-	return ext2.EditFile(reg, s.ID, path, data, s.UID, s.GID, s.IsRoot)
+	if err := ext2.EditFile(reg, s.ID, path, data, s.UID, s.GID, s.IsRoot); err != nil {
+		return err
+	}
+
+	_ = ext3.AppendJournalIfExt3(reg, s.ID, "EDIT", path, string(data))
+
+	return nil
 }

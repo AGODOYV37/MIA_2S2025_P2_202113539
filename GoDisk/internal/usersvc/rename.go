@@ -2,10 +2,12 @@ package usersvc
 
 import (
 	"errors"
+	pathpkg "path"
 	"strings"
 
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/auth"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext2"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext3"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
@@ -24,5 +26,12 @@ func Rename(reg *mount.Registry, path, newName string) error {
 		return errors.New("rename: requiere sesión (login)")
 	}
 
-	return ext2.RenameNode(reg, s.ID, path, newName, s.UID, s.GID, s.IsRoot)
+	if err := ext2.RenameNode(reg, s.ID, path, newName, s.UID, s.GID, s.IsRoot); err != nil {
+		return err
+	}
+
+	newAbs := pathpkg.Join(pathpkg.Dir(path), newName)
+	_ = ext3.AppendJournalIfExt3(reg, s.ID, "RENAME", path+" -> "+newAbs, "")
+
+	return nil
 }

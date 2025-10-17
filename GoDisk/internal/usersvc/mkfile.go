@@ -8,6 +8,7 @@ import (
 
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/auth"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext2"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext3"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
@@ -46,5 +47,13 @@ func Mkfile(reg *mount.Registry, path string, recursive bool, size int, contPath
 		data = nil
 	}
 
-	return ext2.CreateOrOverwriteFile(reg, s.ID, path, data, recursive, force, s.UID, s.GID)
+	// Crear / sobrescribir archivo
+	if err := ext2.CreateOrOverwriteFile(reg, s.ID, path, data, recursive, force, s.UID, s.GID); err != nil {
+		return err
+	}
+
+	// Registrar en journal si la partición es EXT3
+	_ = ext3.AppendJournalIfExt3(reg, s.ID, "MKFILE", path, string(data))
+
+	return nil
 }

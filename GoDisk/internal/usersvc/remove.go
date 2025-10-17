@@ -6,6 +6,7 @@ import (
 
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/auth"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext2"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext3"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
@@ -20,5 +21,11 @@ func Remove(reg *mount.Registry, path string) error {
 		return errors.New("remove: requiere sesión (login)")
 	}
 
-	return ext2.Remove(reg, s.ID, path, s.UID, s.GID)
+	if err := ext2.Remove(reg, s.ID, path, s.UID, s.GID); err != nil {
+		return err
+	}
+
+	_ = ext3.AppendJournalIfExt3(reg, s.ID, "REMOVE", path, "")
+
+	return nil
 }

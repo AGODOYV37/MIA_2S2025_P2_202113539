@@ -6,6 +6,7 @@ import (
 
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/auth"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext2"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext3"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
@@ -25,5 +26,11 @@ func Copy(reg *mount.Registry, path, destino string) error {
 		return errors.New("copy: requiere sesión (login)")
 	}
 
-	return ext2.CopyNode(reg, s.ID, path, destino, s.UID, s.GID, s.IsRoot)
+	if err := ext2.CopyNode(reg, s.ID, path, destino, s.UID, s.GID, s.IsRoot); err != nil {
+		return err
+	}
+
+	_ = ext3.AppendJournalIfExt3(reg, s.ID, "COPY", path, destino)
+
+	return nil
 }

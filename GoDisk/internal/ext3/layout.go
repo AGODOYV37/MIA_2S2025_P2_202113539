@@ -1,10 +1,10 @@
 package ext3
 
 import (
-	"encoding/binary"
 	"time"
 
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext2"
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/xbin"
 )
 
 const (
@@ -12,18 +12,15 @@ const (
 	JournalEntrySize   int64 = 50 // enunciado
 )
 
-func sizeof[T any](v T) int64 { return int64(binary.Size(v)) }
-
 // ComputeLayoutExt3 devuelve: n, SB (con offsets), offset y tamaño del área de journal.
 func ComputeLayoutExt3(partSize int64) (int32, ext2.SuperBloque, int64, int64, error) {
 	var sb ext2.SuperBloque
-	var dummySB ext2.SuperBloque
-	var dummyIn ext2.Inodo
-	szSB := sizeof(dummySB)
-	szIn := sizeof(dummyIn)
+
+	szSB := xbin.SizeOf[ext2.SuperBloque]()
+	szIn := xbin.SizeOf[ext2.Inodo]()
 	szBlk := int64(ext2.BlockSize)
 
-	// Fórmula del enunciado (por n):
+	// Fórmula del enunciado:
 	// size = sizeof(SB) + n*sizeOf(Journaling) + n + 3n + n*sizeOf(inodos) + 3n*sizeOf(block)
 	den := JournalEntrySize + 1 + 3 + szIn + 3*szBlk
 	n64 := (partSize - szSB) / den
@@ -32,12 +29,12 @@ func ComputeLayoutExt3(partSize int64) (int32, ext2.SuperBloque, int64, int64, e
 	}
 	n := int32(n64)
 
-	off := int64(0)
-	sbOff := off
-	journalOff := sbOff + szSB // inmediatamente tras el SB
-	bmInOff := journalOff + int64(n)*JournalEntrySize
-	bmBlOff := bmInOff + int64(n)    // 1 byte por inodo
-	inTblOff := bmBlOff + 3*int64(n) // 1 byte por bloque * 3n
+	// Offsets
+	sbOff := int64(0)
+	journalOff := sbOff + szSB                        // inmediatamente tras el SB
+	bmInOff := journalOff + int64(n)*JournalEntrySize // journal ocupa n entradas
+	bmBlOff := bmInOff + int64(n)                     // 1 byte por inodo
+	inTblOff := bmBlOff + 3*int64(n)                  // 1 byte por bloque * 3n
 	blkTblOff := inTblOff + int64(n)*szIn
 
 	sb = ext2.SuperBloque{
@@ -59,5 +56,6 @@ func ComputeLayoutExt3(partSize int64) (int32, ext2.SuperBloque, int64, int64, e
 		SInodeStart:      inTblOff,
 		SBlockStart:      blkTblOff,
 	}
+
 	return n, sb, journalOff, int64(n) * JournalEntrySize, nil
 }
