@@ -7,8 +7,6 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
-const FileSystemTypeExt3 = 3
-
 type Formatter struct{ reg *mount.Registry }
 
 func NewFormatter(reg *mount.Registry) *Formatter { return &Formatter{reg: reg} }
@@ -18,31 +16,35 @@ func (f *Formatter) MkfsFull(id string) error {
 	if !ok {
 		return fmt.Errorf("mkfs: id %s no está montado", id)
 	}
-
 	partStart := mp.Start
 	partSize := mp.Size
 
-	// Reutilizamos el layout de EXT2
-	_, sb, err := ext2.ComputeLayout(partSize)
+	// Layout EXT3 con journaling como región (n * 50 bytes)
+	_, sb, jOff, jLen, err := ComputeLayoutExt3(partSize)
 	if err != nil {
 		return err
 	}
-	sb.SFilesystemType = FileSystemTypeExt3
 
+	// Escribe SB
 	if err := writeAt(mp.DiskPath, partStart, sb); err != nil {
 		return fmt.Errorf("mkfs: error escribiendo superbloque: %w", err)
 	}
 
+	// Inicializa el área de journal (cero)
+	if err := writeBytes(mp.DiskPath, partStart+jOff, make([]byte, jLen)); err != nil {
+		return fmt.Errorf("mkfs: inicializando journaling: %w", err)
+	}
+
+	// Bitmaps
 	bmIn, bmBl := ext2.NewBitmaps(sb.SInodesCount, sb.SBlocksCount)
 
-	// Reservamos 3 inodos y 3 bloques: root, users.txt, .journal
+	// Reservar root (0) y users.txt (1)
 	ext2.MarkInode(bmIn, 0, true)
 	ext2.MarkBlock(bmBl, 0, true)
 	ext2.MarkInode(bmIn, 1, true)
 	ext2.MarkBlock(bmBl, 1, true)
-	ext2.MarkInode(bmIn, 2, true)
-	ext2.MarkBlock(bmBl, 2, true)
 
+	// Persistir bitmaps
 	if err := writeBytes(mp.DiskPath, partStart+sb.SBmInodeStart, bmIn); err != nil {
 		return err
 	}
@@ -50,7 +52,7 @@ func (f *Formatter) MkfsFull(id string) error {
 		return err
 	}
 
-	// Inodos
+	// Inodos iniciales
 	inoRoot := newInodoCarpeta()
 	inoRoot.IBlock[0] = 0
 	if err := writeAt(mp.DiskPath, partStart+sb.SInodeStart+0*int64(sb.SInodeS), inoRoot); err != nil {
@@ -65,34 +67,28 @@ func (f *Formatter) MkfsFull(id string) error {
 		return err
 	}
 
-	// Inodo de journal (simboliza el journal como archivo regular oculto)
-	journal := buildJournalBlock()
-	inoJournal := newInodoArchivo(len(journal.BContent))
-	inoJournal.IBlock[0] = 2
-	if err := writeAt(mp.DiskPath, partStart+sb.SInodeStart+2*int64(sb.SInodeS), inoJournal); err != nil {
-		return err
-	}
+	// Bloque de carpeta raíz: ".", "..", "users.txt"
+	var rootBlk ext2.BlockFolder
+	copy(rootBlk.BContent[0].BName[:], []byte("."))
+	rootBlk.BContent[0].BInodo = 0
+	copy(rootBlk.BContent[1].BName[:], []byte(".."))
+	rootBlk.BContent[1].BInodo = 0
+	copy(rootBlk.BContent[2].BName[:], []byte("users.txt"))
+	rootBlk.BContent[2].BInodo = 1
 
-	// Bloques
-	rootBlk := buildRootBlockExt3() // incluye ".journal"
+	// Escribir bloques: root folder y users.txt
 	if err := writeAt(mp.DiskPath, partStart+sb.SBlockStart+0*int64(ext2.BlockSize), rootBlk); err != nil {
 		return err
 	}
 	if err := writeAt(mp.DiskPath, partStart+sb.SBlockStart+1*int64(ext2.BlockSize), users); err != nil {
 		return err
 	}
-	if err := writeAt(mp.DiskPath, partStart+sb.SBlockStart+2*int64(ext2.BlockSize), journal); err != nil {
-		return err
-	}
 
-	// Actualiza contadores
-	sb.SFreeInodesCount = sb.SInodesCount - 3
-	sb.SFreeBlocksCount = sb.SBlocksCount - 3
+	// Actualiza contadores y punteros libres
+	sb.SFreeInodesCount = sb.SInodesCount - 2
+	sb.SFreeBlocksCount = sb.SBlocksCount - 2
 	sb.SFirtsIno = ext2.FirstFree(bmIn)
 	sb.SFirstBlo = ext2.FirstFree(bmBl)
 
-	if err := writeAt(mp.DiskPath, partStart, sb); err != nil {
-		return err
-	}
-	return nil
+	return writeAt(mp.DiskPath, partStart, sb)
 }

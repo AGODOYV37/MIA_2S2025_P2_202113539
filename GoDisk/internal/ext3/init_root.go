@@ -36,19 +36,6 @@ func newInodoArchivo(size int) ext2.Inodo {
 	return ino
 }
 
-func buildRootBlockExt3() ext2.BlockFolder {
-	var bf ext2.BlockFolder
-	copy(bf.BContent[0].BName[:], []byte("."))
-	bf.BContent[0].BInodo = 0
-	copy(bf.BContent[1].BName[:], []byte(".."))
-	bf.BContent[1].BInodo = 0
-	copy(bf.BContent[2].BName[:], []byte("users.txt"))
-	bf.BContent[2].BInodo = 1
-	copy(bf.BContent[3].BName[:], []byte(".journal"))
-	bf.BContent[3].BInodo = 2
-	return bf
-}
-
 func buildUsersBlock() ext2.BlockFile {
 	var b ext2.BlockFile
 	copy(b.BContent[:], []byte(usersBootstrap))
