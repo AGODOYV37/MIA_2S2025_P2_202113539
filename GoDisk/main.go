@@ -630,6 +630,8 @@ func (a *App) ProcessLine(line string) string {
 			_ = commands.CmdChown(a.reg, args)
 		case "recovery":
 			_ = commands.CmdRecovery(a.reg, args)
+		case "loss":
+			_ = commands.CmdLoss(a.reg, args)
 		case "chmod":
 			fs := flag.NewFlagSet("chmod", flag.ContinueOnError)
 			fs.SetOutput(io.Discard)
