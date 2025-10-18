@@ -14,3 +14,17 @@
 }
 .login-link { color:#2563eb; text-decoration:none; }
 .shell { padding: 14px; }
+
+.topbar { display:flex; align-items:center; gap:12px; }
+.tabs { display:flex; gap:8px; margin-left:10px; }
+.tabs a {
+  padding:6px 10px;
+  border-radius:8px;
+  text-decoration:none;
+  color:#e5e7eb;
+  border:1px solid transparent;
+}
+.tabs a:hover { background:#1f2937; border-color:#374151; }
+.tabs a.active { background:#111827; border-color:#374151; }
+.spacer { flex:1; }
+

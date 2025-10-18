@@ -1,0 +1,19 @@
+<h2 class="title">Visualizador del Sistema de Archivos</h2>
+
+<div *ngIf="loading" class="state">Actualizando…</div>
+
+<div *ngIf="!loading && error" class="state error">
+  {{ error }}
+</div>
+
+<div *ngIf="!loading && !error && mounts.length === 0" class="state">
+  No hay discos montados.
+</div>
+
+<div *ngIf="!loading && !error && mounts.length" class="grid">
+  <a class="disk" *ngFor="let m of mounts" [routerLink]="['/visualizador', m.id]">
+    <div class="icon">💽</div>
+    <div class="name">{{ baseName(m.diskPath) }}</div>
+    <div class="sub">{{ m.id }} <span *ngIf="m.name">• {{ m.name }}</span></div>
+  </a>
+</div>

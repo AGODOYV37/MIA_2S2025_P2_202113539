@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,6 +34,12 @@ type App struct {
 	mu        sync.Mutex // serializa ejecuciones (estado compartido)
 }
 
+type mountDTO struct {
+	ID       string `json:"id"`
+	DiskPath string `json:"diskPath"`
+	Name     string `json:"name,omitempty"`
+}
+
 func NewApp() *App {
 	reg := mount.NewRegistry()
 	svc := mount.NewService(reg)
@@ -40,6 +47,135 @@ func NewApp() *App {
 	_ = reg.RehydrateFromCatalog()
 	return &App{reg: reg, svc: svc, formatter: formatter}
 
+}
+
+func (a *App) handleListMounts(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+
+	views, err := a.reg.MountedJSON()
+	if err != nil || views == nil {
+		_ = json.NewEncoder(w).Encode([]any{})
+		return
+	}
+
+	pickField := func(v reflect.Value, candidates ...string) string {
+		// desreferencia punteros
+		for v.Kind() == reflect.Pointer {
+			if v.IsNil() {
+				return ""
+			}
+			v = v.Elem()
+		}
+		// caso: map[string]any
+		if v.Kind() == reflect.Map && v.Type().Key().Kind() == reflect.String {
+			for _, k := range candidates {
+				mv := v.MapIndex(reflect.ValueOf(k))
+				if mv.IsValid() && mv.CanInterface() {
+					s := fmt.Sprint(mv.Interface())
+					if strings.TrimSpace(s) != "" {
+						return s
+					}
+				}
+			}
+			// intento “case-insensitive”
+			iter := v.MapRange()
+			for iter.Next() {
+				key := strings.ToLower(iter.Key().String())
+				for _, k := range candidates {
+					if key == strings.ToLower(k) {
+						s := fmt.Sprint(iter.Value().Interface())
+						if strings.TrimSpace(s) != "" {
+							return s
+						}
+					}
+				}
+			}
+			return ""
+		}
+		// caso: struct
+		if v.Kind() == reflect.Struct {
+			t := v.Type()
+			for _, k := range candidates {
+				if f, ok := t.FieldByName(k); ok {
+					fv := v.FieldByIndex(f.Index)
+					if fv.IsValid() && fv.CanInterface() {
+						s := fmt.Sprint(fv.Interface())
+						if strings.TrimSpace(s) != "" {
+							return s
+						}
+					}
+				}
+			}
+			// intento “case-insensitive”
+			for i := 0; i < t.NumField(); i++ {
+				f := t.Field(i)
+				name := strings.ToLower(f.Name)
+				for _, k := range candidates {
+					if name == strings.ToLower(k) {
+						fv := v.Field(i)
+						if fv.IsValid() && fv.CanInterface() {
+							s := fmt.Sprint(fv.Interface())
+							if strings.TrimSpace(s) != "" {
+								return s
+							}
+						}
+					}
+				}
+			}
+		}
+		return ""
+	}
+
+	var collect func(reflect.Value, *[]mountDTO) // 1) declaras la variable
+
+	collect = func(v reflect.Value, out *[]mountDTO) { // 2) luego le asignas el literal
+		// desreferencia punteros
+		for v.Kind() == reflect.Pointer {
+			if v.IsNil() {
+				return
+			}
+			v = v.Elem()
+		}
+
+		switch v.Kind() {
+		case reflect.Slice, reflect.Array:
+			for i := 0; i < v.Len(); i++ {
+				item := v.Index(i)
+				id := pickField(item, "id", "ID", "Id")
+				disk := pickField(item, "diskPath", "DiskPath", "path", "Path", "disk", "Disk")
+				name := pickField(item, "name", "Name", "partition", "Partition", "partitionName", "PartitionName")
+				if strings.TrimSpace(id) != "" && strings.TrimSpace(disk) != "" {
+					*out = append(*out, mountDTO{ID: id, DiskPath: disk, Name: name})
+				}
+			}
+
+		case reflect.Map:
+			// puede ser map[string]X o map[algo]slice; recorremos y recursamos
+			iter := v.MapRange()
+			for iter.Next() {
+				collect(iter.Value(), out)
+			}
+
+		default:
+			id := pickField(v, "id", "ID", "Id")
+			disk := pickField(v, "diskPath", "DiskPath", "path", "Path", "disk", "Disk")
+			name := pickField(v, "name", "Name", "partition", "Partition", "partitionName", "PartitionName")
+			if strings.TrimSpace(id) != "" && strings.TrimSpace(disk) != "" {
+				*out = append(*out, mountDTO{ID: id, DiskPath: disk, Name: name})
+			}
+		}
+	}
+
+	var out []mountDTO
+	collect(reflect.ValueOf(views), &out)
+
+	// UX: si no logramos extraer nada, responde []
+	if len(out) == 0 {
+		_ = json.NewEncoder(w).Encode([]any{})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(out)
 }
 
 func (a *App) handleReportMBR(w http.ResponseWriter, r *http.Request) {
@@ -740,6 +876,7 @@ func runHTTP(address string) error {
 	mux.HandleFunc("/api/reports/ls", app.handleReportLS)
 	mux.HandleFunc("/api/login", app.handleLogin)
 	mux.HandleFunc("/api/logout", app.handleLogout)
+	mux.HandleFunc("/api/mounts", app.handleListMounts)
 
 	fmt.Println("HTTP API escuchando en", address)
 	return http.ListenAndServe(address, mux)

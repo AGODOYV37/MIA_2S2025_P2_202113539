@@ -1,6 +1,12 @@
 <header class="topbar">
   <a routerLink="/" class="brand">GoDisk</a>
 
+
+  <nav class="tabs">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Consola</a>
+    <a routerLink="/visualizador" routerLinkActive="active">Visualizador</a>
+  </nav>
+
   <span class="spacer"></span>
 
   <ng-container *ngIf="(auth.session$ | async) as s; else notLogged">

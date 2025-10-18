@@ -6,7 +6,7 @@ import { Reports, MBRReport, DiskReport, DiskSegment, InodeReport, InodeMini, Bl
 import { Observable, EMPTY, of, forkJoin } from 'rxjs';
 import { finalize, map, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth';
-import { RouterLink } from '@angular/router';
+
 
 
 
@@ -18,7 +18,7 @@ type RepKind = 'mbr' | 'disk' | 'block' | 'bm_inode' | 'bm_block' | 'tree' | 'ls
 @Component({
   selector: 'app-consola',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   templateUrl: './consola.html',
   styleUrls: ['./consola.scss']
 })
