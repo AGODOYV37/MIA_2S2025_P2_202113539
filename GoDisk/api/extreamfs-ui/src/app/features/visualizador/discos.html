@@ -10,10 +10,13 @@
   No hay discos montados.
 </div>
 
+
 <div *ngIf="!loading && !error && mounts.length" class="grid">
   <a class="disk" *ngFor="let m of mounts" [routerLink]="['/visualizador', m.id]">
     <div class="icon">💽</div>
-    <div class="name">{{ baseName(m.diskPath) }}</div>
+    <div class="name" [title]="baseName(m.diskPath)">
+      {{ baseName(m.diskPath) }}
+    </div>
     <div class="sub">{{ m.id }} <span *ngIf="m.name">• {{ m.name }}</span></div>
   </a>
 </div>

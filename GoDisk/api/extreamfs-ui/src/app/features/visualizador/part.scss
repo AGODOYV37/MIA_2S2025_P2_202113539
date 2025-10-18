@@ -2,19 +2,35 @@
 .state { color:#9ca3af; padding: 12px 0; }
 .state.error { color:#ef4444; }
 
+
 .meta {
   display:flex; gap:12px; flex-wrap:wrap;
-  color:#555; font-size:12px; margin-bottom:10px;
+  color:#fff;                 
+  font-size:12px; margin-bottom:10px;
 }
 
+
 .wrap { border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; background:#fff; }
+
+
 .tbl { width:100%; border-collapse:separate; border-spacing:0; font-size:14px; }
+
 .tbl thead th {
-  position:sticky; top:0; background:#f8fafc; color:#111827;
-  text-align:left; padding:.6rem .7rem; border-bottom:1px solid #e5e7eb; z-index:1;
+  position:sticky; top:0;
+  background:#f8fafc; color:#111827;
+  text-align:left; padding:.6rem .7rem;
+  border-bottom:1px solid #e5e7eb; z-index:1;
 }
-.tbl tbody td { padding:.55rem .7rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+
+.tbl tbody td {
+  padding:.55rem .7rem;
+  border-bottom:1px solid #f1f5f9;
+  vertical-align:middle;
+  color:#374151;             
+}
+
 .tbl tbody tr:nth-child(even){ background:#fcfcfd; }
 .tbl tbody tr:hover{ background:#f6faff; }
-.num { text-align:right; }
+
+.num  { text-align:right; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
