@@ -1,5 +1,21 @@
 <h1 class="retro-title">Consola de Comandos</h1>
 
+
+<ng-container *ngIf="(auth.session$ | async) as s; else noAuth">
+  <div class="session-banner ok">
+    Sesión: <b>{{ s.user }}</b>@{{ s.mountId }}
+    <small *ngIf="s.isRoot" style="margin-left:6px;">(root)</small>
+
+  </div>
+</ng-container>
+<ng-template #noAuth>
+  <div class="session-banner warn">
+    No autenticado.
+    <span class="spacer"></span>
+  </div>
+</ng-template>
+
+
 <label class="retro-label">Entrada de comandos</label>
 <textarea class="crt" [(ngModel)]="entrada" rows="10"></textarea>
 

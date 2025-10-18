@@ -313,5 +313,37 @@ html, body {
 }
 
 
+.session-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: .95rem;
+  border: 1px solid #ddd;
+  color: #111;
+}
+.session-banner.ok   { background: #ecfeff; border-color: #67e8f9; }
+.session-banner.warn { background: #fff7ed; border-color: #fdba74; }
+
+.session-banner .spacer { flex: 1; }
+
+.link-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none; /* para <a> */
+  color: inherit;        /* para <a> */
+}
+.link-btn:hover {
+  background: #f8fafc;
+}
+
+
 html, body, :host { overflow-x: hidden; }
 

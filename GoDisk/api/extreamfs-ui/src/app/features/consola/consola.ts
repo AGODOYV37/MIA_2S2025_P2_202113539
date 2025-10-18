@@ -5,6 +5,10 @@ import { Commands } from '../../core/services/commands';
 import { Reports, MBRReport, DiskReport, DiskSegment, InodeReport, InodeMini, BlockReport, BlockItem, TreeReport, TreeInode, SBReport, LSItem, LSReport } from '../../core/services/reports';
 import { Observable, EMPTY, of, forkJoin } from 'rxjs';
 import { finalize, map, switchMap } from 'rxjs/operators';
+import { AuthService } from '../../core/services/auth';
+import { RouterLink } from '@angular/router';
+
+
 
 type Block = { kind: DiskSegment['kind']; label: string; tip: string };
 type RepKind = 'mbr' | 'disk' | 'block' | 'bm_inode' | 'bm_block' | 'tree' | 'ls'  ;
@@ -14,7 +18,7 @@ type RepKind = 'mbr' | 'disk' | 'block' | 'bm_inode' | 'bm_block' | 'tree' | 'ls
 @Component({
   selector: 'app-consola',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './consola.html',
   styleUrls: ['./consola.scss']
 })
@@ -25,6 +29,8 @@ export class Consola {
   entrada = '';
   salida = '';
   cargando = false;
+  
+
 
   // Modales (existentes)
   mbr: MBRReport | null = null;
@@ -94,6 +100,7 @@ dismissLS() { this.ls = null; }
     constructor(
     private api: Commands,
     private reports: Reports,
+    public auth: AuthService,
     private zone: NgZone,
     private cdr: ChangeDetectorRef
   ) {}
