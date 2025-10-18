@@ -50,7 +50,7 @@
 <dialog [open]="!!mbr" style="width:min(900px,95vw);border-radius:12px;padding:16px;">
   <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
     <h3 style="margin:0;">Reporte MBR</h3>
-    <button (click)="mbr = null">Cerrar ✕</button>
+    <button (click)="dismissMBR()">Cerrar ✕</button>
   </header>
 
   <!-- Renderiza contenido solo con datos; sin 'else' para evitar el texto de 'No hay datos…' -->
@@ -202,7 +202,7 @@
 <dialog [open]="!!inode" style="width:min(900px,95vw);border-radius:12px;padding:16px;">
   <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
     <h3 style="margin:0;">Reporte INODE</h3>
-    <button (click)="inode = null">Cerrar ✕</button>
+    <button (click)="dismissINODE()">Cerrar ✕</button>
   </header>
 
   <ng-container *ngIf="inode as inr">

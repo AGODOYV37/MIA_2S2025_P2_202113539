@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Commands } from '../../core/services/commands';
 import { Reports, MBRReport, DiskReport, DiskSegment, InodeReport, InodeMini, BlockReport, BlockItem, TreeReport, TreeInode, SBReport, LSItem, LSReport } from '../../core/services/reports';
 import { Observable, EMPTY, of, forkJoin } from 'rxjs';
-import { finalize, map, switchMap } from 'rxjs/operators';
+import { finalize, map, switchMap, tap } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth';
 
 
@@ -62,7 +62,7 @@ export class Consola {
   treeSel = -1;  // inodo seleccionado
 
   sb: SBReport | null = null;
-  dismissSB() { this.sb = null; }
+
 
   // estado nuevo
   ls: LSReport | null = null;
@@ -77,23 +77,16 @@ edgesFrom(idx: number) {
 selectTreeInode(idx: number) {
   this.treeSel = idx;
 }
-dismissTREE() { this.showTree = false; this.tree = null; this.treeSel = -1; }
+
 
 
 bmInodeText: string | null = null;
 showBmInode = false;
-dismissBmInode() { this.showBmInode = false; this.bmInodeText = null; }
+
 
 bmBlockText: string | null = null;
 showBmBlock = false;
-dismissBmBlock() { this.showBmBlock = false; this.bmBlockText = null; }
 
-
-
-dismissBLOCKS() { this.showBlocks = false; this.blocks = null; this.blocksFlow = []; }
-
-dismissLS() { this.ls = null; }
-  
 
   private actionSeq = 0;
 
@@ -158,7 +151,9 @@ async onPickSmia(ev: Event) {
   this.inodeRoot = null; this.inodeSel = null; this.inodesChain = [];
   this.diskBlocks = []; this.extBlocks = []; this.inodeRuns = [];
   this.blocks = null; this.blocksFlow = []; this.showBlocks = false;
-  this.cargando = true; this.salida = '';
+  this.cargando = true;
+  this.salida = '';
+  this.cdr.detectChanges();
   this.bmInodeText = null; this.showBmInode = false;
   this.bmBlockText = null; this.showBmBlock = false;
   this.ls = null;
@@ -180,71 +175,73 @@ async onPickSmia(ev: Event) {
 
   
 
-
-  this.api.execute(script).pipe(
-    switchMap(res => {
-      if (token !== this.actionSeq) return EMPTY;
+this.api.execute(script).pipe(
+  // Pinta la salida de texto apenas llega
+  tap(res => {
+    if (token !== this.actionSeq) return;
+    this.zone.run(() => {
       this.salida = res?.output ?? '';
+      this.cdr.detectChanges();
+    });
+  }),
 
-      // Pide lo necesario en paralelo
-      const tasks: Observable<Record<string, any>>[] = [];
-      if (mbrId)  tasks.push(this.reports.getMBRWithRetry(mbrId, 2, 250).pipe(map(m => ({ mbr: m }))));
-      if (diskId) tasks.push(this.reports.getDiskWithRetry(diskId, 2, 250).pipe(map(d => ({ disk: d }))));
-      if (blockId) tasks.push(this.reports.getBlocksWithRetry(blockId, 2, 250).pipe(map(b => ({ block: b })))); 
-      
-      this.tree = null; this.showTree = false; this.treeSel = -1;
-      const treeId = this.detectRep(script, 'tree')?.id || null;
+  // Construye tareas para reportes (sin tocar el estado aquí)
+  switchMap(() => {
+    if (token !== this.actionSeq) return EMPTY;
 
+    const tasks: Observable<Record<string, any>>[] = [];
 
-      if (treeId) tasks.push(this.reports.getTreeWithRetry(treeId, 2, 250).pipe(map(t => ({ tree: t }))));
+    if (mbrId)  tasks.push(this.reports.getMBRWithRetry(mbrId, 2, 250).pipe(map(m => ({ mbr: m }))));
+    if (diskId) tasks.push(this.reports.getDiskWithRetry(diskId, 2, 250).pipe(map(d => ({ disk: d }))));
+    if (blockId) tasks.push(this.reports.getBlocksWithRetry(blockId, 2, 250).pipe(map(b => ({ block: b }))));
 
+    const treeId = this.detectRep(script, 'tree')?.id || null;
+    if (treeId) tasks.push(this.reports.getTreeWithRetry(treeId, 2, 250).pipe(map(t => ({ tree: t }))));
 
-      if (fileQ) {
-        this.reports.openFileInNewTab(fileQ.id, fileQ.ruta);
-      }
-
-
-      if (inodeQ) {
-        const call = inodeQ.ruta
-          ? this.reports.getInodeWithRetry(inodeQ.id, inodeQ.ruta, 2, 250)
-          : this.reports.getInodeWithRetry(inodeQ.id, '', 2, 250); // '' => backend usa default
-        tasks.push(call.pipe(map(i => ({ inode: i }))));
-      }
-
-      if (bmInodeId) {
-        tasks.push(this.reports.getBmInodeWithRetry(bmInodeId, 2, 250).pipe(map(txt => ({ bmInode: txt }))));
-      }
-
-      if (sbId)  tasks.push(this.reports.getSBWithRetry(sbId, 2, 250).pipe(map(s => ({ sb: s }))));
-
-
-      if (inodesQ?.id) {
-        tasks.push(this.reports.getInodes(inodesQ.id, 0).pipe(map(list => ({ inodesList: list }))));
-      }
-
-          if (bmBlockId) {
-      tasks.push(this.reports.getBmBlockWithRetry(bmBlockId, 2, 250).pipe(map(txt => ({ bmBlock: txt }))));
+    if (fileQ) {
+      // abrir pestaña no requiere zone, pero no hace daño
+      this.reports.openFileInNewTab(fileQ.id, fileQ.ruta);
     }
 
-      if (lsQ?.id) {
-        const r = lsQ.ruta ?? '/';
-        tasks.push(this.reports.getLSWithRetry(lsQ.id, r, 2, 250).pipe(map(ls => ({ ls }))));
-      }
+    if (inodeQ) {
+      const call = inodeQ.ruta
+        ? this.reports.getInodeWithRetry(inodeQ.id, inodeQ.ruta, 2, 250)
+        : this.reports.getInodeWithRetry(inodeQ.id, '', 2, 250);
+      tasks.push(call.pipe(map(i => ({ inode: i }))));
+    }
 
+    if (bmInodeId) tasks.push(this.reports.getBmInodeWithRetry(bmInodeId, 2, 250).pipe(map(txt => ({ bmInode: txt }))));
+    if (sbId)      tasks.push(this.reports.getSBWithRetry(sbId, 2, 250).pipe(map(s => ({ sb: s }))));
 
-      if (tasks.length === 0) return of(null);
+    if (inodesQ?.id) tasks.push(this.reports.getInodes(inodesQ.id, 0).pipe(map(list => ({ inodesList: list }))));
 
-      
+    if (bmBlockId) tasks.push(this.reports.getBmBlockWithRetry(bmBlockId, 2, 250).pipe(map(txt => ({ bmBlock: txt }))));
 
-      return forkJoin(tasks).pipe(
-        map(parts => parts.reduce((acc, part) => ({ ...acc, ...part }), {} as Record<string, any>))
-      );
-    }),
-    finalize(() => { if (token === this.actionSeq) this.cargando = false; })
-  ).subscribe({
-    next: (payload: any) => {
-      if (token !== this.actionSeq) return;
+    if (lsQ?.id) {
+      const r = lsQ.ruta ?? '/';
+      tasks.push(this.reports.getLSWithRetry(lsQ.id, r, 2, 250).pipe(map(ls => ({ ls }))));
+    }
 
+    if (tasks.length === 0) return of(null);
+
+    return forkJoin(tasks).pipe(
+      map(parts => parts.reduce((acc, part) => ({ ...acc, ...part }), {} as Record<string, any>))
+    );
+  }),
+
+  // Asegura que el spinner se apague en UI
+  finalize(() => {
+    if (token !== this.actionSeq) return;
+    this.zone.run(() => {
+      this.cargando = false;
+      this.cdr.detectChanges();
+    });
+  })
+).subscribe({
+  next: (payload: any) => {
+    if (token !== this.actionSeq) return;
+
+    this.zone.run(() => {
       // MBR
       if (payload?.mbr?.partitions?.length) {
         this.mbr = { ...payload.mbr, partitions: [...payload.mbr.partitions] };
@@ -267,31 +264,24 @@ async onPickSmia(ev: Event) {
         this.inodeRuns = this.makeContiguousRuns(inode.blocks ?? []);
       }
 
-      // INODES (explorador: cadena de tarjetas)
+      // INODES (explorador)
       if (payload?.inodesList?.items) {
         const list = payload.inodesList;
         this.inodesPartId = list.id || '';
         this.buildInodeChainFromList(list.items || []);
       }
 
-      // BLOCKS (modal tipo tarjetas, SIEMPRE al nivel superior)
+      // BLOCKS
       if (payload?.block) {
         const rep = payload.block as BlockReport;
         const list = (rep as any).blocks ?? (rep as any).items ?? [];
         this.blocks = JSON.parse(JSON.stringify(rep));
         this.blocksFlow = Array.isArray(list) ? [...list].sort((a: any, b: any) => a.index - b.index) : [];
-        this.showBlocks = true; // <-- abre el modal
+        this.showBlocks = true;
       }
 
-      if (typeof payload?.bmInode === 'string') {
-              this.bmInodeText = payload.bmInode;
-              this.showBmInode = true;
-            }
-
-      if (typeof payload?.bmBlock === 'string') {
-            this.bmBlockText = payload.bmBlock;
-            this.showBmBlock = true;
-          }
+      if (typeof payload?.bmInode === 'string') { this.bmInodeText = payload.bmInode; this.showBmInode = true; }
+      if (typeof payload?.bmBlock === 'string') { this.bmBlockText = payload.bmBlock; this.showBmBlock = true; }
 
       if (payload?.tree?.nodes?.length) {
         const rep: TreeReport = payload.tree;
@@ -300,38 +290,29 @@ async onPickSmia(ev: Event) {
         this.showTree = true;
       }
 
-            // SB
-      if (payload?.sb) {
-        this.sb = JSON.parse(JSON.stringify(payload.sb));
-      }
+      if (payload?.sb) this.sb = JSON.parse(JSON.stringify(payload.sb));
+      if (payload?.ls) this.ls = payload.ls as LSReport;
 
+      // 👇 fuerza render de todo lo anterior
+      this.cdr.detectChanges();
+    });
+  },
 
-      if (payload?.ls) {
-        this.ls = payload.ls as LSReport;
-      }
-
-
-
-
-
-
-
-  
-
-    },
-    error: (err) => {
+  error: (err) => {
     if (token !== this.actionSeq) return;
     const msg =
       (err?.error && typeof err.error === 'object' && err.error.error) ||
       (typeof err?.error === 'string' ? err.error : '') ||
-      err?.message ||
-      'desconocido';
-    this.salida = `Error: ${msg}`;
+      err?.message || 'desconocido';
+
+    this.zone.run(() => {
+      this.salida = `Error: ${msg}`;
+      this.cdr.detectChanges();
+    });
   }
+});
 
-  });
-}
-
+ }
 
 
 
@@ -388,29 +369,30 @@ private detectRepLS(script: string): { id: string; ruta?: string } | null {
 
 
 
-  private buildInodeChainFromList(items: { index: number }[], max = this.maxChainNodes) {
-  // abre el modal aunque aún no lleguen los nodos
+private buildInodeChainFromList(items: { index: number }[], max = this.maxChainNodes) {
   this.showInodes = true;
   this.inodesChain = [];
-
   if (!this.inodesPartId) return;
 
   const indices = (items || []).map(x => x.index).slice(0, max);
   if (!indices.length) return;
 
-  // pide todos los inodos en paralelo manteniendo el orden
   forkJoin(indices.map(idx => this.reports.getInode(this.inodesPartId, String(idx))))
     .subscribe({
       next: nodes => {
-        // clonado defensivo
-        this.inodesChain = nodes.map(n => JSON.parse(JSON.stringify(n)));
+        this.zone.run(() => {
+          this.inodesChain = nodes.map(n => JSON.parse(JSON.stringify(n)));
+          this.cdr.detectChanges();
+        });
       },
-      error: err => {
+      error: err => this.zone.run(() => {
         console.error('buildInodeChainFromList', err);
         this.inodesChain = [];
-      }
+        this.cdr.detectChanges();
+      })
     });
 }
+
 
 
   // Detecta rep -name=inode -id=XXXX [-ruta=N]  (ruta opcional)
@@ -444,28 +426,22 @@ private detectRepLS(script: string): { id: string; ruta?: string } | null {
 }
 
 
-  // Carga detalle de un inodo y actualiza tarjetas + corridas
-  selectInode(idx: number) {
-    if (!this.inodesPartId) return;
-    this.reports.getInode(this.inodesPartId, String(idx)).subscribe({
-      next: rep => {
-        // La primera vez, fija también la tarjeta izquierda (root)
+selectInode(idx: number) {
+  if (!this.inodesPartId) return;
+  this.reports.getInode(this.inodesPartId, String(idx)).subscribe({
+    next: rep => {
+      this.zone.run(() => {
         if (!this.inodeRoot) this.inodeRoot = rep;
         this.inodeSel = rep;
         this.inodeRuns = this.makeContiguousRuns(rep.blocks ?? []);
-      },
-      error: err => console.error(err)
-    });
-  }
+        this.cdr.detectChanges();
+      });
+    },
+    error: err => this.zone.run(() => console.error(err))
+  });
+}
 
-  closeInodes() {
-    this.showInodes = false;
-    this.inodes = [];
-    this.inodeRoot = null;
-    this.inodeSel = null;
-    this.inodeRuns = [];
-    this.inodesChain = [];
-  }
+
 
   // Convierte segmentos en bloques discretos para mosaico
   private makeBlocks(segments: DiskSegment[], total = 100): Block[] {
@@ -514,9 +490,34 @@ get salidaConPrefijo(): string {
 
 }
 
+// --- dismiss helpers (dentro de export class Consola) ---
+dismissMBR()  { this.mbr = null; this.cdr.detectChanges(); }
+dismissINODE(){ this.inode = null; this.cdr.detectChanges(); }
 
-  dismissMBR()  { this.mbr = null; }
-  dismissDISK() { this.disk = null;  this.diskBlocks=[]; this.extBlocks=[]; }
+dismissDISK() { this.disk = null; this.diskBlocks = []; this.extBlocks = []; this.cdr.detectChanges(); }
+
+dismissBLOCKS() { this.showBlocks = false; this.blocks = null; this.blocksFlow = []; this.cdr.detectChanges(); }
+
+dismissBmInode() { this.showBmInode = false; this.bmInodeText = null; this.cdr.detectChanges(); }
+dismissBmBlock() { this.showBmBlock = false; this.bmBlockText = null; this.cdr.detectChanges(); }
+
+dismissTREE() { this.showTree = false; this.tree = null; this.treeSel = -1; this.cdr.detectChanges(); }
+dismissSB()   { this.sb = null; this.cdr.detectChanges(); }
+dismissLS()   { this.ls = null; this.cdr.detectChanges(); }
+
+// si quieres, ajusta closeInodes para refrescar al cierre:
+closeInodes() {
+  this.showInodes = false;
+  this.inodes = [];
+  this.inodeRoot = null;
+  this.inodeSel = null;
+  this.inodeRuns = [];
+  this.inodesChain = [];
+  this.cdr.detectChanges();
+}
+
+
+
 
   trackRow = (_: number, p: any) => `${p.index}-${p.start}-${p.size}`;
   trackLS(_: number, it: LSItem): string {
