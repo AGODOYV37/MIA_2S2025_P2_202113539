@@ -1,0 +1,57 @@
+<h2 class="title">Partición {{ id }}</h2>
+
+<div *ngIf="loading" class="state">Actualizando…</div>
+<div *ngIf="!loading && error" class="state error">{{ error }}</div>
+
+<div *ngIf="!loading && !error && ls as L">
+  <div class="meta">
+    <span><b>Disco:</b> {{ L.diskPath }}</span>
+    <span><b>ID:</b> {{ L.id }}</span>
+    <span><b>Ruta:</b> {{ L.dir }}</span>
+    <span><b>Items:</b> {{ L.items.length || 0 }}</span>
+  </div>
+
+  <div class="wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Tipo</th>
+          <th class="num">Inodo</th>
+          <th class="num">Tamaño</th>
+          <th class="mono">Permisos</th>
+          <th class="num">UID</th>
+          <th>Owner</th>
+          <th class="num">GID</th>
+          <th>Group</th>
+          <th>Modificado</th>
+          <th>Creado</th>
+          <th>Accedido</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let it of L.items">
+          <td>{{ it.name }}</td>
+          <td>{{ it.type }}</td>
+          <td class="num">#{{ it.inode }}</td>
+          <td class="num">{{ it.size | number }}</td>
+          <td class="mono">{{ it.perm }}</td>
+          <td class="num">{{ it.uid }}</td>
+          <td>{{ it.owner || '—' }}</td>
+          <td class="num">{{ it.gid }}</td>
+          <td>{{ it.group || '—' }}</td>
+          <td>{{ it.mtime || '—' }}</td>
+          <td>{{ it.ctime || '—' }}</td>
+          <td>{{ it.atime || '—' }}</td>
+        </tr>
+        <tr *ngIf="L.items.length === 0">
+          <td colspan="12" style="text-align:center;color:#666;padding:16px;">(directorio vacío)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="margin-top:14px;">
+    <a routerLink="/visualizador">⟵ Volver</a>
+  </p>
+</div>

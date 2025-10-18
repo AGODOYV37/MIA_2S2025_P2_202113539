@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MountsService, MountView } from '../../core/services/mount';
@@ -15,18 +15,32 @@ export class VisualizadorComponent implements OnInit {
   error = '';
   mounts: MountView[] = [];
 
-  constructor(private mountsSvc: MountsService) {}
+  constructor(
+    private mountsSvc: MountsService,
+    private zone: NgZone,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
+    this.loading = true;
+    this.cdr.detectChanges(); // asegura que el "Actualizando…" se pinte
+
     this.mountsSvc.getAll().subscribe({
       next: (list) => {
-        this.mounts = list ?? [];
-        this.loading = false;
+        // Fuerza a correr dentro de Angular y refrescar la vista
+        this.zone.run(() => {
+          this.mounts = list ?? [];
+          this.loading = false;
+          this.cdr.detectChanges();
+        });
       },
       error: (err) => {
-        this.error = (err?.error?.error || err?.message || 'Error cargando montajes');
-        this.mounts = [];
-        this.loading = false;        
+        this.zone.run(() => {
+          this.error = (err?.error?.error || err?.message || 'Error cargando montajes');
+          this.mounts = [];
+          this.loading = false;
+          this.cdr.detectChanges();
+        });
       }
     });
   }
