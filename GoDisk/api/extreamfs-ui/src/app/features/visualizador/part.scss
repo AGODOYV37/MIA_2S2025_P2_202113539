@@ -2,35 +2,74 @@
 .state { color:#9ca3af; padding: 12px 0; }
 .state.error { color:#ef4444; }
 
-
 .meta {
   display:flex; gap:12px; flex-wrap:wrap;
-  color:#fff;                 
+  color:#fff;                       /* blanco para metadatos */
   font-size:12px; margin-bottom:10px;
 }
 
-
-.wrap { border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; background:#fff; }
-
-
-.tbl { width:100%; border-collapse:separate; border-spacing:0; font-size:14px; }
-
-.tbl thead th {
-  position:sticky; top:0;
-  background:#f8fafc; color:#111827;
-  text-align:left; padding:.6rem .7rem;
-  border-bottom:1px solid #e5e7eb; z-index:1;
+.grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+  gap:12px;
 }
 
-.tbl tbody td {
-  padding:.55rem .7rem;
-  border-bottom:1px solid #f1f5f9;
-  vertical-align:middle;
-  color:#374151;             
+/* Tarjeta de partición */
+.part {
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  text-decoration:none; color:inherit;
+  padding:14px; border:1px solid #e5e7eb; border-radius:12px;
+  background:#fff;
+  transition: transform .05s ease, box-shadow .15s ease, border-color .15s ease;
+  min-height: 140px;
 }
 
-.tbl tbody tr:nth-child(even){ background:#fcfcfd; }
-.tbl tbody tr:hover{ background:#f6faff; }
+.part:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,.08);
+}
 
-.num  { text-align:right; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+/* distinción leve por tipo */
+.part.pm { border-color:#c7d2fe; }  /* primaria: índigo claro */
+.part.lg { border-color:#bbf7d0; }  /* lógica: verde claro */
+
+.part.disabled {
+  pointer-events: none;
+  opacity: .6;
+  filter: grayscale(0.1);
+}
+
+.icon { font-size:28px; }
+.name {
+  font-weight:600;
+  color:#111827;          /* más oscuro */
+  text-align:center;
+  line-height: 1.2;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  width: 100%;
+}
+
+.sub {
+  font-size:12px; color:#6b7280;
+  text-align:center;
+}
+
+.status {
+  margin-top: 6px;
+  font-size: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.status.off {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #6b7280;
+}
+
+/* Tabla antigua: mantenemos por si algo la referencia, pero ya no se usa */
+.wrap { display:none; }
+.tbl  { display:none; }

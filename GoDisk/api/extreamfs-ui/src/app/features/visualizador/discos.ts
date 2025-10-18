@@ -2,6 +2,7 @@ import { Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MountsService, MountView } from '../../core/services/mount';
+import { finalize } from 'rxjs/operators';
 
 @Component({
   selector: 'app-visualizador',
@@ -23,26 +24,41 @@ export class VisualizadorComponent implements OnInit {
 
   ngOnInit(): void {
     this.loading = true;
-    this.cdr.detectChanges(); // asegura que el "Actualizando…" se pinte
+    this.mountsSvc.getAll()
+      .pipe(finalize(() => {
+        // apaga el spinner pase lo que pase
+        this.zone.run(() => { this.loading = false; this.cdr.detectChanges(); });
+      }))
+      .subscribe({
+        next: (list) => {
 
-    this.mountsSvc.getAll().subscribe({
-      next: (list) => {
-        // Fuerza a correr dentro de Angular y refrescar la vista
-        this.zone.run(() => {
-          this.mounts = list ?? [];
-          this.loading = false;
-          this.cdr.detectChanges();
-        });
-      },
-      error: (err) => {
-        this.zone.run(() => {
-          this.error = (err?.error?.error || err?.message || 'Error cargando montajes');
-          this.mounts = [];
-          this.loading = false;
-          this.cdr.detectChanges();
-        });
-      }
-    });
+          this.zone.run(() => {
+            const norm = (p: string) => (p || '').replace(/\\+/g, '/').toLowerCase().trim();
+
+
+            const byDisk = new Map<string, MountView>();
+            for (const m of (list ?? [])) {
+              const key = norm(m.diskPath);
+              if (!byDisk.has(key)) byDisk.set(key, m);
+            }
+
+            const onlyDisks = Array.from(byDisk.values());
+            this.mounts = onlyDisks.sort((a, b) =>
+              this.baseName(a.diskPath).localeCompare(this.baseName(b.diskPath))
+            );
+
+            this.error = '';
+            this.cdr.detectChanges(); 
+          });
+        },
+        error: (err) => {
+          this.zone.run(() => {
+            this.error = (err?.error?.error || err?.message || 'Error cargando montajes');
+            this.mounts = [];
+            this.cdr.detectChanges();
+          });
+        }
+      });
   }
 
   baseName(p: string): string {
