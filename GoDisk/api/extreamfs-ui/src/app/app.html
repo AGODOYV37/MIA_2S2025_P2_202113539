@@ -1,1 +1,18 @@
-<router-outlet />
+<header class="topbar">
+  <a routerLink="/" class="brand">GoDisk</a>
+
+  <span class="spacer"></span>
+
+  <ng-container *ngIf="(auth.session$ | async) as s; else notLogged">
+    <span class="badge">Sesión: {{ s.user }}@{{ s.mountId }} <small *ngIf="s.isRoot">(root)</small></span>
+    <button class="logout" (click)="logout()">Cerrar sesión</button>
+  </ng-container>
+
+  <ng-template #notLogged>
+    <a routerLink="/login" class="login-link">Iniciar sesión</a>
+  </ng-template>
+</header>
+
+<main class="shell">
+  <router-outlet></router-outlet>
+</main>

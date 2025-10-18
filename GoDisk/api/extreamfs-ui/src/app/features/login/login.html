@@ -1,0 +1,27 @@
+<div class="login-wrap">
+  <h1>Iniciar sesión</h1>
+  <p class="hint">Autentícate para gestionar archivos. Usa el ID de una partición montada.</p>
+
+  <form (ngSubmit)="submit()" #f="ngForm" novalidate>
+    <label>Usuario</label>
+    <input name="usr" [(ngModel)]="usr" autocomplete="username" required>
+
+    <label>Contraseña</label>
+    <input name="pwd" [(ngModel)]="pwd" type="password" autocomplete="current-password" required>
+
+    <label>ID de partición montada</label>
+    <input name="mountId" [(ngModel)]="mountId" placeholder="ej. 391A" required>
+
+    <button class="primary" type="submit" [disabled]="cargando || !usr || !pwd || !mountId">
+      {{ cargando ? 'Ingresando…' : 'Entrar' }}
+    </button>
+
+    <button type="button" class="ghost" (click)="verMontajes()" [disabled]="cargando">
+      Ver particiones montadas
+    </button>
+
+    <div *ngIf="error" class="error">{{ error }}</div>
+
+    <pre *ngIf="mountedRaw" class="mounts">{{ mountedRaw }}</pre>
+  </form>
+</div>

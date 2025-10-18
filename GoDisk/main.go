@@ -738,9 +738,105 @@ func runHTTP(address string) error {
 	mux.HandleFunc("/api/reports/sb", app.handleReportSB)
 	mux.HandleFunc("/api/reports/file", app.handleReportFile)
 	mux.HandleFunc("/api/reports/ls", app.handleReportLS)
+	mux.HandleFunc("/api/login", app.handleLogin)
+	mux.HandleFunc("/api/logout", app.handleLogout)
 
 	fmt.Println("HTTP API escuchando en", address)
 	return http.ListenAndServe(address, mux)
+}
+
+// ======== AUTH ENDPOINTS ========
+
+type LoginReq struct {
+	// Aceptamos ambos esquemas de nombres para compatibilidad
+	User string `json:"user"` // preferido
+	Pass string `json:"pass"`
+	Usr  string `json:"usr"` // alias
+	Pwd  string `json:"pwd"` // alias
+	Id   string `json:"id"`
+}
+type LoginRes struct {
+	OK      bool   `json:"ok"`
+	User    string `json:"user"`
+	MountID string `json:"id"`
+	IsRoot  bool   `json:"isRoot"`
+	Output  string `json:"output,omitempty"`
+}
+
+func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "solo POST", http.StatusMethodNotAllowed)
+		return
+	}
+	var req LoginReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "json inválido")
+		return
+	}
+	usr := strings.TrimSpace(req.User)
+	if usr == "" {
+		usr = strings.TrimSpace(req.Usr)
+	}
+	pwd := strings.TrimSpace(req.Pass)
+	if pwd == "" {
+		pwd = strings.TrimSpace(req.Pwd)
+	}
+	id := strings.TrimSpace(req.Id)
+	if usr == "" || pwd == "" || id == "" {
+		writeJSONError(w, http.StatusBadRequest, "user/usr, pass/pwd e id son requeridos")
+		return
+	}
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	var exitCode int
+	stdout, _ := captureOutput(func() {
+		// Reutilizamos el comando, ahora con FlagSet seguro (ContinueOnError)
+		args := []string{
+			"-id=" + id,
+			"-user=" + usr,
+			"-pass=" + pwd,
+		}
+		exitCode = commands.CmdLogin(a.reg, args)
+	})
+
+	if exitCode != 0 {
+		// El propio comando imprimió el error en stdout; lo devolvemos.
+		msg := strings.TrimSpace(stdout)
+		if msg == "" {
+			msg = "login: credenciales inválidas o error interno"
+		}
+		writeJSONError(w, http.StatusUnauthorized, msg)
+		return
+	}
+
+	writeJSON(w, LoginRes{
+		OK:      true,
+		User:    usr,
+		MountID: id,
+		IsRoot:  strings.EqualFold(usr, "root"),
+		Output:  strings.TrimSpace(stdout),
+	})
+}
+
+func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "solo POST", http.StatusMethodNotAllowed)
+		return
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	var code int
+	_, _ = captureOutput(func() {
+		code = commands.CmdLogout(nil) // o []string{}
+	})
+	if code != 0 {
+		writeJSONError(w, http.StatusBadRequest, "no se pudo cerrar sesión")
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
 }
 
 func runCLI() {
