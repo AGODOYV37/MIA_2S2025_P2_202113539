@@ -457,6 +457,38 @@ func (a *App) handleReportFile(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
+func (a *App) handleReportJournaling(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "solo GET", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+
+	sess, err := auth.Require()
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "journaling: requiere login")
+		return
+	}
+
+	qid := strings.TrimSpace(r.URL.Query().Get("id"))
+	if qid == "" {
+		qid = sess.ID
+	}
+
+	if !strings.EqualFold(qid, sess.ID) {
+		writeJSONError(w, http.StatusForbidden, "journaling: id no coincide con la sesión activa")
+		return
+	}
+
+	rows, err := ext3.ListJournal(a.reg, qid)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, rows)
+}
+
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	enc := json.NewEncoder(w)
@@ -834,6 +866,8 @@ func (a *App) ProcessLine(line string) string {
 			_ = commands.CmdRecovery(a.reg, args)
 		case "loss":
 			_ = commands.CmdLoss(a.reg, args)
+		case "journaling":
+			_ = commands.CmdJournaling(a.reg, args)
 		case "chmod":
 			fs := flag.NewFlagSet("chmod", flag.ContinueOnError)
 			fs.SetOutput(io.Discard)
@@ -945,7 +979,7 @@ func runHTTP(address string) error {
 	mux.HandleFunc("/api/mounts", app.handleListMounts)
 	mux.HandleFunc("/api/fs/find", app.handleFSFind)
 	mux.HandleFunc("/api/fs/ls", app.handleFSLS)
-
+	mux.HandleFunc("/api/reports/journaling", app.handleReportJournaling)
 	fmt.Println("HTTP API escuchando en", address)
 	return http.ListenAndServe(address, mux)
 }

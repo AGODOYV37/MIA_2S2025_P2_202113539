@@ -18,7 +18,6 @@ func ReadUsersText(reg *mount.Registry, id string) (string, error) {
 		return "", fmt.Errorf("users: leyendo SB: %w", err)
 	}
 
-	// ✅ Aceptar EXT2 (2) o EXT3 (3), con el mismo magic 0xEF53
 	if sb.SMagic != MagicEXT2 {
 		return "", errors.New("users: la partición no parece EXT2/EXT3 válida (magic)")
 	}

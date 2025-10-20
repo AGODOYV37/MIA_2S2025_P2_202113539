@@ -635,6 +635,51 @@
   </ng-container>
 </dialog>
 
+<!-- ===== MODAL: JOURNALING ===== -->
+<dialog [open]="!!journaling" style="width:min(900px,95vw);border-radius:12px;padding:16px;">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="margin:0;">Journaling</h3>
+    <button (click)="dismissJournaling()">Cerrar ✕</button>
+  </header>
+
+  <ng-container *ngIf="journaling as J; else noJour">
+    <div style="max-height:65vh; overflow:auto;">
+      <table style="border-collapse:collapse; width:100%;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding:.4rem; border-bottom:1px solid #ddd;">#</th>
+            <th style="text-align:left; padding:.4rem; border-bottom:1px solid #ddd;">Operación</th>
+            <th style="text-align:left; padding:.4rem; border-bottom:1px solid #ddd;">Path</th>
+            <th style="text-align:left; padding:.4rem; border-bottom:1px solid #ddd;">Contenido</th>
+            <th style="text-align:left; padding:.4rem; border-bottom:1px solid #ddd;">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of J; index as i">
+            <td style="padding:.4rem; border-bottom:1px solid #eee;">{{ r.count }}</td>
+            <td style="padding:.4rem; border-bottom:1px solid #eee;">
+              <span style="display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:10px; font-size:12px;">
+                {{ r.operation }}
+              </span>
+            </td>
+            <td style="padding:.4rem; border-bottom:1px solid #eee;"><code>{{ r.path }}</code></td>
+            <td style="padding:.4rem; border-bottom:1px solid #eee;">{{ r.content || '—' }}</td>
+            <td style="padding:.4rem; border-bottom:1px solid #eee;">
+              {{ r.date | date:'yyyy-MM-dd HH:mm:ss' }} UTC
+            </td>
+          </tr>
+          <tr *ngIf="J.length === 0">
+            <td colspan="5" style="text-align:center; color:#666; padding:14px;">(sin entradas de journal)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <ng-template #noJour>
+    <p style="color:#666;">(sin datos para mostrar)</p>
+  </ng-template>
+</dialog>
 
 
 

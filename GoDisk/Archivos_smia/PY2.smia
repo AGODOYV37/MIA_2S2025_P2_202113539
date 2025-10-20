@@ -1,0 +1,126 @@
+# 1) Preparación de disco y partición
+mkdisk -size=80 -unit=m -fit=ff -path="/tmp/dk_all.mia"
+# Disco creado exitosamente en: /tmp/dk_all.mia
+
+fdisk  -path="/tmp/dk_all.mia" -name="Part1" -size=60 -unit=m -type=p -fit=wf
+# Iniciando creación de partición Primaria...
+# Partición primaria 'Part1' creada exitosamente.
+
+mount  -path="/tmp/dk_all.mia" -name="Part1"
+# Particion montada, ID= 391E   <-- Toma nota: 391D=391E (ejemplo)
+
+mounted
+# 391E
+
+# 2) Formateo EXT3 y login como root
+mkfs -id=391D -type=full -fs=ext3
+# mkfs: formateo EXT3 completado en 391D
+
+login -id=391D -user=root -pass=123
+# Sesión iniciada: root (uid=1, gid=1) en 391D
+# Rol: root, grupo: root
+
+# 3) Operaciones de FS
+mkdir  -path="/home" -p
+# mkdir: creada /home
+
+mkdir  -path="/docs" -p
+# mkdir: creada /docs
+
+mkdir  -path="/images" -p
+# mkdir: creada /images
+
+mkfile -path="/home/readme.txt" -size=32
+# mkfile: creado/actualizado /home/readme.txt
+
+mkfile -path="/docs/notes.txt"  -size=20
+# mkfile: creado/actualizado /docs/notes.txt
+
+# CAT: (tu wrapper suele aceptar -file1, -file2, ...)
+cat -file1="/home/readme.txt" -file2="/docs/notes.txt"
+# (imprime el contenido concatenado con salto de línea)
+
+# EDIT: cambiar contenido de readme.txt
+edit -path="/home/readme.txt" -cont="Hola desde EDIT"
+# edit: actualizado /home/readme.txt
+
+# COPY: copiar /docs/notes.txt hacia /home
+copy -path="/docs/notes.txt" -destino="/home"
+# copy: completado (/docs/notes.txt -> /home)
+
+# MOVE: mover carpeta /docs dentro de /home
+move -path="/docs" -destino="/home"
+# move: '/docs' -> '/home' (OK)
+
+# RENAME: renombrar /home/docs -> /home/projects
+rename -path="/home/docs" -name="projects"
+# rename: '/home/docs' ahora se llama 'projects'
+
+# FIND: comodines
+find -path="/" -name="*"
+# /users.txt
+# /home
+# /home/readme.txt
+# /home/notes.txt
+# /home/projects
+# /home/projects/notes.txt
+# /images
+
+find -path="/" -name="?.*"
+# (mostrará aquellos cuyo nombre coincida con un solo char + punto + algo, si aplican)
+
+# CHMOD: recursivo 764 sobre /home
+chmod -path="/home" -r -ugo=764
+# chmod: aplicado 764 a /home (recursivo)
+
+# CHOWN: cambiar propietario (usamos root->root para validar flujo; si tienes otros usuarios, cámbialo)
+chown -path="/home/projects" -usuario=root -r
+# chown: propietario actualizado (recursivo) para /home/projects
+
+# REMOVE: elimina el archivo /home/readme.txt
+remove -path="/home/readme.txt"
+# remove: eliminado /home/readme.txt
+
+# 4) Ver journaling (JSON) para que tu frontend lo pinte en tabla
+journaling -id=391D
+# [
+#   { "count": 1, "operation": "MKDIR",  "path": "/home",                "content": "",                "date": "..." },
+#   { "count": 2, "operation": "MKDIR",  "path": "/docs",                "content": "",                "date": "..." },
+#   { "count": 3, "operation": "MKDIR",  "path": "/images",              "content": "",                "date": "..." },
+#   { "count": 4, "operation": "MKFILE", "path": "/home/readme.txt",     "content": "size=32",         "date": "..." },
+#   { "count": 5, "operation": "MKFILE", "path": "/docs/notes.txt",      "content": "size=20",         "date": "..." },
+#   { "count": 6, "operation": "EDIT",   "path": "/home/readme.txt",     "content": "Hola desde EDIT", "date": "..." },
+#   { "count": 7, "operation": "COPY",   "path": "/docs/notes.txt",      "content": "dest=/home",      "date": "..." },
+#   { "count": 8, "operation": "MOVE",   "path": "/docs",                "content": "dest=/home",      "date": "..." },
+#   { "count": 9, "operation": "RENAME", "path": "/home/docs",           "content": "name=projects",   "date": "..." },
+#   { "count":10, "operation": "CHMOD",  "path": "/home",                "content": "ugo=764,r=true",  "date": "..." },
+#   { "count":11, "operation": "CHOWN",  "path": "/home/projects",       "content": "usuario=root,r=true", "date": "..." },
+#   { "count":12, "operation": "REMOVE", "path": "/home/readme.txt",     "content": "",                "date": "..." }
+# ]
+
+# (Opcional) CHGRP de root debe fallar (por tu validación)
+chgrp -user=root -grp=devs
+# Error: chgrp: no se permite cambiar el grupo del usuario root
+
+# 5) Simular pérdida y recuperar
+loss -id=391D
+# loss: bitmaps, inodos y bloques limpiados en 391D
+
+# tras el LOSS, muchas operaciones fallarán o no verán el arbol. Probamos recovery:
+recovery -id=391D
+# recovery: completado
+# Procesadas: 12 | aplicadas: 12 | omitidas: 0 | errores: 0
+# Por operación: MKDIR=3, MKFILE=2, EDIT=1, COPY=1, MOVE=1, RENAME=1, CHMOD=1, CHOWN=1, REMOVE=1
+
+# Comprobamos que el árbol volvió a un estado consistente
+find -path="/" -name="*"
+# /users.txt
+# /home
+# /home/notes.txt
+# /home/projects
+# /home/projects/notes.txt
+# /images
+
+# (Opcional) revisar journaling de nuevo (las entradas siguen ahí; tu recovery no las borra)
+journaling -id=391D
+# [ ... mismas entradas ... ]

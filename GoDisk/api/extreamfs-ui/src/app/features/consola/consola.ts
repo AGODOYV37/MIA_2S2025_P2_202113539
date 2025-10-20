@@ -2,7 +2,7 @@ import { Component, ViewChild, ElementRef, NgZone, ChangeDetectorRef } from '@an
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Commands } from '../../core/services/commands';
-import { Reports, MBRReport, DiskReport, DiskSegment, InodeReport, InodeMini, BlockReport, BlockItem, TreeReport, TreeInode, SBReport, LSItem, LSReport } from '../../core/services/reports';
+import { Reports, MBRReport, DiskReport, DiskSegment, InodeReport, InodeMini, BlockReport, BlockItem, TreeReport, TreeInode, SBReport, LSItem, LSReport, JournalRow } from '../../core/services/reports';
 import { Observable, EMPTY, of, forkJoin } from 'rxjs';
 import { finalize, map, switchMap, tap } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth';
@@ -66,6 +66,9 @@ export class Consola {
 
   // estado nuevo
   ls: LSReport | null = null;
+
+  journaling: JournalRow[] | null = null;
+
 
 
   get treeNode(): TreeInode | null {
@@ -157,6 +160,8 @@ async onPickSmia(ev: Event) {
   this.bmInodeText = null; this.showBmInode = false;
   this.bmBlockText = null; this.showBmBlock = false;
   this.ls = null;
+  this.journaling = null;
+
 
 
   // detectores
@@ -169,6 +174,7 @@ async onPickSmia(ev: Event) {
   const bmBlockId = this.detectRep(script, 'bm_block')?.id || null;
   const sbId   = this.detectRep(script, 'sb' as any /*extiende la union*/)?.id || null;
   const lsQ = this.detectRepLS(script);
+  const journQ = this.detectJournaling(script);
 
     
   
@@ -203,6 +209,13 @@ this.api.execute(script).pipe(
       this.reports.openFileInNewTab(fileQ.id, fileQ.ruta);
     }
 
+    if (journQ) {
+      tasks.push(
+        this.reports.getJournalingWithRetry(journQ.id, 2, 250)
+          .pipe(map(rows => ({ journaling: rows })))
+      );
+    }
+
     if (inodeQ) {
       const call = inodeQ.ruta
         ? this.reports.getInodeWithRetry(inodeQ.id, inodeQ.ruta, 2, 250)
@@ -228,6 +241,8 @@ this.api.execute(script).pipe(
       map(parts => parts.reduce((acc, part) => ({ ...acc, ...part }), {} as Record<string, any>))
     );
   }),
+
+  
 
   // Asegura que el spinner se apague en UI
   finalize(() => {
@@ -270,6 +285,11 @@ this.api.execute(script).pipe(
         this.inodesPartId = list.id || '';
         this.buildInodeChainFromList(list.items || []);
       }
+
+      if (Array.isArray(payload?.journaling)) {
+        this.journaling = payload.journaling as JournalRow[];
+      }
+
 
       // BLOCKS
       if (payload?.block) {
@@ -367,6 +387,12 @@ private detectRepLS(script: string): { id: string; ruta?: string } | null {
 }
 
 
+private detectJournaling(script: string): { id?: string } | null {
+  const line = script.split('\n').map(s => s.trim()).find(s => /^journaling\b/i.test(s));
+  if (!line) return null;
+  const id = /-id\s*=\s*"?([A-Za-z0-9]+)"?/i.exec(line)?.[1];
+  return id ? { id } : {};
+}
 
 
 private buildInodeChainFromList(items: { index: number }[], max = this.maxChainNodes) {
@@ -504,6 +530,10 @@ dismissBmBlock() { this.showBmBlock = false; this.bmBlockText = null; this.cdr.d
 dismissTREE() { this.showTree = false; this.tree = null; this.treeSel = -1; this.cdr.detectChanges(); }
 dismissSB()   { this.sb = null; this.cdr.detectChanges(); }
 dismissLS()   { this.ls = null; this.cdr.detectChanges(); }
+dismissJournaling() { 
+  this.journaling = null; 
+  this.cdr.detectChanges(); 
+}
 
 // si quieres, ajusta closeInodes para refrescar al cierre:
 closeInodes() {

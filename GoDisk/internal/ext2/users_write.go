@@ -37,7 +37,7 @@ func RewriteUsers(reg *mount.Registry, id string, content string) error {
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return fmt.Errorf("users: leyendo SB: %w", err)
 	}
-	if sb.SFilesystemType != FileSystemType || sb.SMagic != MagicEXT2 {
+	if sb.SMagic != MagicEXT2 {
 		return errors.New("users: la partición no es EXT2 válida")
 	}
 

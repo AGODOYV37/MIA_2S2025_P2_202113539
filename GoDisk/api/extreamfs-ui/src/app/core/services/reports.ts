@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable, of, throwError, timer } from 'rxjs';
-import { catchError, switchMap, map, tap } from 'rxjs/operators';
+import { catchError, switchMap, map, tap, retryWhen, delay, take } from 'rxjs/operators';
 
 
 export interface MBRPartReport {
@@ -206,6 +206,13 @@ export interface LSReport {
   items: LSItem[];
 }
 
+export interface JournalRow {
+  count: number;
+  operation: string;
+  path: string;
+  content: string;
+  date: string; 
+}
 
 
 @Injectable({ providedIn: 'root' })
@@ -459,6 +466,20 @@ getLSWithRetry(id: string, ruta = '/', tries = 2, delayMs = 250): Observable<LSR
 
   return attempt(tries);
 }
+
+
+getJournaling(id?: string) {
+  const params: any = { t: Date.now().toString() };
+  if (id) params.id = id;
+  return this.http.get<JournalRow[]>('/api/reports/journaling', { params });
+}
+
+getJournalingWithRetry(id?: string, retries = 2, delayMs = 250) {
+  return this.getJournaling(id).pipe(
+    retryWhen(err$ => err$.pipe(delay(delayMs), take(retries)))
+  );
+}
+
 
 
 
