@@ -1,4 +1,3 @@
-// GoDisk/api/extreamfs-ui/src/app/features/visualizador/fs.ts
 import { Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
@@ -6,6 +5,7 @@ import { combineLatest } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
 import { FsService, FsFindResp } from '../../core/services/fs';
+import { LSReport, LSItem } from '../../core/services/reports';
 
 type DirEnt = { name: string; abs: string };
 type FileEnt = { name: string; abs: string };
@@ -27,6 +27,12 @@ export class FsExplorerComponent implements OnInit {
   dirs: DirEnt[] = [];
   files: FileEnt[] = [];
 
+  // ⬇️ Estado del visor de archivo
+  filePath: string | null = null;
+  fileText: string | null = null;
+  fileLoading = false;
+  fileError = '';
+
   constructor(
     private route: ActivatedRoute,
     private fs: FsService,
@@ -39,7 +45,6 @@ export class FsExplorerComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Reacciona a cambios de :id y ?ruta=
     combineLatest([this.route.paramMap, this.route.queryParamMap]).subscribe(
       ([pm, qm]: [ParamMap, ParamMap]) => {
         const newId = (pm.get('id') || '').trim();
@@ -51,6 +56,13 @@ export class FsExplorerComponent implements OnInit {
           this.ruta = newRuta;
           this.error = '';
           this.loading = true;
+
+          // Al cambiar de carpeta, cerramos el visor de archivo
+          this.filePath = null;
+          this.fileText = null;
+          this.fileError = '';
+          this.fileLoading = false;
+
           this.cdr.detectChanges();
         });
 
@@ -69,7 +81,6 @@ export class FsExplorerComponent implements OnInit {
   }
 
   private load(): void {
-    // Usa /api/fs/find para construir la navegación (respeta permisos y sesión en el backend)
     this.fs
       .findList(this.id, this.ruta)
       .pipe(
@@ -110,6 +121,57 @@ export class FsExplorerComponent implements OnInit {
             this.cdr.detectChanges();
           }),
       });
+  }
+
+  // ⬇️ Abrir archivo (si es texto) en el visor
+  openFile(f: FileEnt): void {
+    if (!this.id || !f?.abs) return;
+
+    this.zone.run(() => {
+      this.filePath = f.abs;
+      this.fileText = null;
+      this.fileError = '';
+      this.fileLoading = true;
+      this.cdr.detectChanges();
+    });
+
+    this.fs.fileText(this.id, f.abs)
+      .pipe(finalize(() => {
+        this.zone.run(() => {
+          this.fileLoading = false;
+          this.cdr.detectChanges();
+        });
+      }))
+      .subscribe({
+        next: (txt: string) => this.zone.run(() => {
+          // opcional: heurística mínima para “texto”
+          const isProbablyText = !/[\x00-\x08\x0E-\x1F]/.test(txt);
+          if (isProbablyText) {
+            this.fileText = txt;
+          } else {
+            this.fileError = 'El archivo no parece ser de texto.';
+          }
+          this.cdr.detectChanges();
+        }),
+        error: (err) => this.zone.run(() => {
+          this.fileError =
+            (err?.error && typeof err.error === 'object' && err.error.error) ||
+            (typeof err?.error === 'string' ? err.error : '') ||
+            err?.message ||
+            'No se pudo leer el archivo.';
+          this.cdr.detectChanges();
+        })
+      });
+  }
+
+  closeFile(): void {
+    this.zone.run(() => {
+      this.filePath = null;
+      this.fileText = null;
+      this.fileError = '';
+      this.fileLoading = false;
+      this.cdr.detectChanges();
+    });
   }
 
   // ========= Utils usados por la plantilla =========

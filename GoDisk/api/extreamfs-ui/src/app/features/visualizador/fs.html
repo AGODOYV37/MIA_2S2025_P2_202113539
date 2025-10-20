@@ -7,13 +7,11 @@
   <!-- Breadcrumb -->
   <div class="crumbs">
     <ng-container *ngFor="let c of crumbs(); let last = last">
-      <!-- Los intermedios son links -->
       <a *ngIf="!last"
          [routerLink]="['/visualizador', id, 'fs']"
          [queryParams]="{ ruta: c.abs }">
         {{ c.label }}
       </a>
-      <!-- El último es texto plano -->
       <span *ngIf="last">{{ c.label }}</span>
       <span *ngIf="!last" class="sep">/</span>
     </ng-container>
@@ -22,7 +20,6 @@
   <div class="hint">Navegue entre carpetas; los archivos se habilitarán más adelante</div>
 
   <header class="fs-head">
-    <!-- Botón atrás/arriba usa RouterLink para empujar la URL -->
     <button class="back"
             type="button"
             [routerLink]="['/visualizador', id, 'fs']"
@@ -33,7 +30,7 @@
   </header>
 
   <div class="grid">
-    <!-- Carpetas: navegamos declarativamente a su ruta absoluta -->
+    <!-- Carpetas -->
     <a class="item dir"
        *ngFor="let d of dirs"
        [routerLink]="['/visualizador', id, 'fs']"
@@ -43,11 +40,27 @@
       <div class="meta">Carpeta</div>
     </a>
 
-    <!-- Archivos (aún sin acción) -->
-    <div class="item file" *ngFor="let f of files">
+    <!-- Archivos: ahora clic abre visor -->
+    <button class="item file" *ngFor="let f of files" type="button" (click)="openFile(f)">
       <div class="ico">📄</div>
       <div class="name" [title]="f.name">{{ f.name }}</div>
       <div class="meta">Archivo</div>
+    </button>
+  </div>
+
+  <!-- Visor de archivo debajo del grid -->
+  <div class="preview" *ngIf="filePath">
+    <div class="pv-head">
+      <div class="pv-info">
+        <b>Archivo:</b> <code>{{ filePath }}</code>
+      </div>
+      <div class="pv-actions">
+        <span *ngIf="fileLoading" class="pv-loading">Cargando…</span>
+        <button *ngIf="!fileLoading" type="button" class="pv-close" (click)="closeFile()">✕ Cerrar</button>
+      </div>
     </div>
+
+    <div *ngIf="fileError" class="pv-error">{{ fileError }}</div>
+    <pre *ngIf="!fileError && fileText !== null" class="pv-body">{{ fileText }}</pre>
   </div>
 </div>
