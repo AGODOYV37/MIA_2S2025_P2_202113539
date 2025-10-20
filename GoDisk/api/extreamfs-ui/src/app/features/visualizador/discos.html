@@ -13,7 +13,7 @@
 
 <div *ngIf="!loading && !error && mounts.length" class="grid">
   <a class="disk" *ngFor="let m of mounts" [routerLink]="['/visualizador', m.id]">
-    <div class="icon">💽</div>
+  <img class="icon" src="icons/hard-disk.png" alt="Disco" loading="lazy" decoding="async">
     <div class="name" [title]="baseName(m.diskPath)">
       {{ baseName(m.diskPath) }}
     </div>

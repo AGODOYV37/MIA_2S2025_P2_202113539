@@ -25,9 +25,10 @@
            [class.lg]="p.kind === 'L'"
            [routerLink]="['/visualizador', p.mountId, 'fs']"
            [queryParams]="{ ruta: '/' }">
-          <div class="icon" [attr.aria-label]="p.kind === 'P' ? 'Partición primaria' : 'Partición lógica'">
-            {{ p.kind === 'P' ? '🧱' : '🧩' }}
-          </div>
+        <img class="icon"
+            [src]="p.kind === 'P' ? 'icons/hard-drive.png' : 'icons/partition_logical.png'"
+            [alt]="p.kind === 'P' ? 'Partición primaria' : 'Partición lógica'"
+            loading="lazy" decoding="async">
           <div class="name" [title]="p.name">{{ p.name }}</div>
           <div class="sub">
             {{ p.kind === 'P' ? 'Primaria' : 'Lógica' }} •
@@ -41,9 +42,11 @@
           <div class="part disabled"
                [class.pm]="p.kind === 'P'"
                [class.lg]="p.kind === 'L'">
-            <div class="icon" [attr.aria-label]="p.kind === 'P' ? 'Partición primaria' : 'Partición lógica'">
-              {{ p.kind === 'P' ? '🧱' : '🧩' }}
-            </div>
+          <img class="icon"
+              [src]="p.kind === 'P' ? 'icons/hard-drive.png' : 'icons/partition_logical.png'"
+              [alt]="p.kind === 'P' ? 'Partición primaria' : 'Partición lógica'"
+              loading="lazy" decoding="async">
+
             <div class="name" [title]="p.name">{{ p.name }}</div>
             <div class="sub">
               {{ p.kind === 'P' ? 'Primaria' : 'Lógica' }} •

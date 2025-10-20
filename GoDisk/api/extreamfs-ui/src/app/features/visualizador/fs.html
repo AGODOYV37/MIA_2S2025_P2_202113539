@@ -35,14 +35,14 @@
        *ngFor="let d of dirs"
        [routerLink]="['/visualizador', id, 'fs']"
        [queryParams]="{ ruta: d.abs }">
-      <div class="ico">📁</div>
+       <img class="ico" src="icons/folder.png" alt="Carpeta" loading="lazy" decoding="async">
       <div class="name" [title]="d.name">{{ d.name }}</div>
       <div class="meta">Carpeta</div>
     </a>
 
     <!-- Archivos: ahora clic abre visor -->
     <button class="item file" *ngFor="let f of files" type="button" (click)="openFile(f)">
-      <div class="ico">📄</div>
+      <img class="ico" src="icons/document.png" alt="Archivo" loading="lazy" decoding="async">
       <div class="name" [title]="f.name">{{ f.name }}</div>
       <div class="meta">Archivo</div>
     </button>

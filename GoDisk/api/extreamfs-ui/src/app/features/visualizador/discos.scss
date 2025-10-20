@@ -31,7 +31,16 @@
   box-shadow: 0 6px 14px rgba(0,0,0,.08);
 }
 
-.icon { font-size:28px; }
+.icon {
+  width: 42px;          
+  height: 42px;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none; 
+}
+
+
 
 
 .name {

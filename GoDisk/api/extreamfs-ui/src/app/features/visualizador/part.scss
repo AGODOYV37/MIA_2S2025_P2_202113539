@@ -30,8 +30,8 @@
 }
 
 /* distinción leve por tipo */
-.part.pm { border-color:#c7d2fe; }  /* primaria: índigo claro */
-.part.lg { border-color:#bbf7d0; }  /* lógica: verde claro */
+.part.pm { border-color:#c7d2fe; }  
+.part.lg { border-color:#bbf7d0; }  
 
 .part.disabled {
   pointer-events: none;
@@ -39,10 +39,18 @@
   filter: grayscale(0.1);
 }
 
-.icon { font-size:28px; }
+.icon {
+  width: 42px;
+  height: 42px;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+
+}
+
 .name {
   font-weight:600;
-  color:#111827;          /* más oscuro */
+  color:#111827;          
   text-align:center;
   line-height: 1.2;
   word-break: break-word;
