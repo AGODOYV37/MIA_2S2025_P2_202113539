@@ -1,162 +1,158 @@
+// GoDisk/api/extreamfs-ui/src/app/features/visualizador/fs.ts
 import { Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router} from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { combineLatest } from 'rxjs';
-import { FsService, FindRes } from '../../core/services/fs';
+import { finalize } from 'rxjs/operators';
 
-type Child = { name: string; abs: string; type: 'dir'|'file' };
+import { FsService, FsFindResp } from '../../core/services/fs';
+
+type DirEnt = { name: string; abs: string };
+type FileEnt = { name: string; abs: string };
 
 @Component({
   selector: 'app-fs-explorer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './fs.html',
-  styleUrls: ['./fs.scss']
+  styleUrls: ['./fs.scss'],
 })
 export class FsExplorerComponent implements OnInit {
   id = '';
   ruta = '/';
+
   loading = true;
   error = '';
-  // lo que mostramos (solo hijos inmediatos)
-  dirs: Child[] = [];
-  files: Child[] = [];
+
+  dirs: DirEnt[] = [];
+  files: FileEnt[] = [];
 
   constructor(
-    private fs: FsService,
     private route: ActivatedRoute,
-    private router: Router,
+    private fs: FsService,
     private zone: NgZone,
     private cdr: ChangeDetectorRef
   ) {}
 
+  get isRoot(): boolean {
+    return this.ruta === '/';
+  }
+
   ngOnInit(): void {
-    combineLatest([this.route.paramMap, this.route.queryParamMap]).subscribe(([pm, qm]) => {
-      const id = (pm.get('id') || '').trim();
-      const ruta = (qm.get('ruta') || '/').trim();
-      this.zone.run(() => {
-        this.id = id;
-        this.ruta = this.normalizePath(ruta || '/');
-        this.error = '';
-        this.loading = true;
-        this.dirs = [];
-        this.files = [];
-        this.cdr.detectChanges();
-      });
-      this.load();
-    });
-  }
+    // Reacciona a cambios de :id y ?ruta=
+    combineLatest([this.route.paramMap, this.route.queryParamMap]).subscribe(
+      ([pm, qm]: [ParamMap, ParamMap]) => {
+        const newId = (pm.get('id') || '').trim();
+        let newRuta = (qm.get('ruta') || '/').trim();
+        newRuta = this.normalizeRuta(newRuta);
 
-  private load() {
-    this.fs.find(this.ruta, '*').subscribe({
-      next: (res: FindRes) => this.zone.run(() => {
-        const children = this.immediateChildren(res.items, this.ruta);
-        // separa carpetas/archivos y ordena
-        this.dirs = children.filter(c => c.type === 'dir')
-                            .sort((a,b) => a.name.localeCompare(b.name));
-        this.files = children.filter(c => c.type === 'file')
-                             .sort((a,b) => a.name.localeCompare(b.name));
-        this.loading = false;
-        this.cdr.detectChanges();
-      }),
-      error: (err) => this.zone.run(() => {
-        this.error = (err?.error || err?.message || 'Error listando');
-        this.loading = false;
-        this.cdr.detectChanges();
-      })
-    });
-  }
+        this.zone.run(() => {
+          this.id = newId;
+          this.ruta = newRuta;
+          this.error = '';
+          this.loading = true;
+          this.cdr.detectChanges();
+        });
 
-  // Devuelve hijos inmediatos bajo 'base'. Deducción de tipo por presencia de subrutas.
-    private immediateChildren(all: string[], base: string): Child[] {
-    const norm = (p: string) => this.normalizePath(p);
-    base = norm(base);
-    const prefix = base === '/' ? '/' : base + '/';
-
-    const under = all.map(norm).filter(p => p !== base && p.startsWith(prefix));
-
-    const seen = new Map<string, Child>();
-    for (const abs of under) {
-        const rel = abs.slice(prefix.length);
-        if (!rel) continue;
-        const first = rel.split('/')[0];
-        if (!first) continue;
-        const key = first.toLowerCase();
-
-        // 👇 Carpeta SÓLO si hay algo más profundo con el mismo primer segmento
-        const isDir = under.some(p => p.startsWith(prefix + first + '/'));
-        const type: 'dir' | 'file' = isDir ? 'dir' : 'file';
-
-        if (!seen.has(key)) {
-        seen.set(key, { name: first, abs: this.join(base, first), type });
+        if (!this.id) {
+          this.zone.run(() => {
+            this.error = 'Falta el ID de partición montada.';
+            this.loading = false;
+            this.cdr.detectChanges();
+          });
+          return;
         }
-    }
-    return Array.from(seen.values());
-    }
 
-  // Navegación
-  goTo(child: Child) {
-    if (child.type !== 'dir') return; // por ahora archivos no se abren
-    this.router.navigate(['/visualizador', this.id, 'fs'], {
-      queryParams: { ruta: child.abs }
-    });
+        this.load();
+      }
+    );
   }
 
-  // Breadcrumb: segmentos clicables
+  private load(): void {
+    // Usa /api/fs/find para construir la navegación (respeta permisos y sesión en el backend)
+    this.fs
+      .findList(this.id, this.ruta)
+      .pipe(
+        finalize(() =>
+          this.zone.run(() => {
+            this.loading = false;
+            this.cdr.detectChanges();
+          })
+        )
+      )
+      .subscribe({
+        next: (resp: FsFindResp) =>
+          this.zone.run(() => {
+            const baseAbs = this.ruta;
+
+            this.dirs = (resp?.dirs ?? []).map((name) => ({
+              name,
+              abs: this.joinAbs(baseAbs, name),
+            }));
+
+            this.files = (resp?.files ?? []).map((name) => ({
+              name,
+              abs: this.joinAbs(baseAbs, name),
+            }));
+
+            this.error = '';
+            this.cdr.detectChanges();
+          }),
+        error: (err) =>
+          this.zone.run(() => {
+            this.error =
+              (err?.error && typeof err.error === 'object' && err.error.error) ||
+              (typeof err?.error === 'string' ? err.error : '') ||
+              err?.message ||
+              'No se pudo listar la ruta.';
+            this.dirs = [];
+            this.files = [];
+            this.cdr.detectChanges();
+          }),
+      });
+  }
+
+  // ========= Utils usados por la plantilla =========
+
   crumbs(): { label: string; abs: string }[] {
-    const parts = this.ruta === '/' ? [] : this.ruta.split('/').filter(Boolean);
-    const acc: { label: string; abs: string }[] = [{ label: '/', abs: '/' }];
-    let cur = '';
+    const r = this.ruta;
+    if (r === '/' || !r) return [{ label: '/', abs: '/' }];
+
+    const parts = r.replace(/^\/+/, '').split('/').filter(Boolean);
+    const out: { label: string; abs: string }[] = [{ label: '/', abs: '/' }];
+
+    let acc = '';
     for (const p of parts) {
-      cur = this.join(cur || '/', p);
-      acc.push({ label: p, abs: cur });
+      acc += '/' + p;
+      out.push({ label: p, abs: acc || '/' });
     }
-    return acc;
+    return out;
   }
 
-  goCrumb(abs: string) {
-    this.router.navigate(['/visualizador', this.id, 'fs'], { queryParams: { ruta: abs }});
+  parent(p: string): string {
+    const n = this.normalizeRuta(p);
+    if (n === '/') return '/';
+    const segs = n.split('/').filter(Boolean);
+    segs.pop();
+    const up = '/' + segs.join('/');
+    return up === '' ? '/' : up;
   }
 
-    get isRoot(): boolean {
-    return this.normalizePath(this.ruta) === '/';
+  // ========= Helpers internos =========
+
+  private normalizeRuta(r: string): string {
+    if (!r) return '/';
+    let s = r.replace(/\\+/g, '/');
+    s = s.replace(/\/{2,}/g, '/');
+    if (!s.startsWith('/')) s = '/' + s;
+    if (s.length > 1) s = s.replace(/\/+$/, '');
+    return s;
   }
 
-  private parentOf(p: string): string {
-    p = this.normalizePath(p);
-    if (p === '/') return '/';
-    // quita trailing slash
-    if (p.endsWith('/')) p = p.slice(0, -1);
-    const cut = p.lastIndexOf('/');
-    const parent = cut <= 0 ? '/' : p.slice(0, cut);
-    return parent || '/';
-  }
-
-  goUp(): void {
-    const parent = this.parentOf(this.ruta);
-
-    if (parent === '/') {
-      // si ya estás en raíz, vuelve a las particiones del disco
-      this.router.navigate(['/visualizador', this.id]);
-    } else {
-      // mismo explorador, un nivel arriba
-      this.router.navigate(
-        ['/visualizador', this.id, 'fs'],
-        { queryParams: { ruta: parent } }
-      );
-    }
-  }
-
-
-  private normalizePath(p: string): string {
-    if (!p) return '/';
-    p = p.replace(/\\+/g, '/').replace(/\/{2,}/g, '/').trim();
-    if (!p.startsWith('/')) p = '/' + p;
-    return p === '' ? '/' : p;
-  }
-
-  private join(parent: string, child: string): string {
-    if (!parent || parent === '/') return `/${child}`;
-    return `${parent}/${child}`;
+  private joinAbs(dir: string, name: string): string {
+    const d = this.normalizeRuta(dir);
+    const n = (name || '').replace(/^\/+/, '');
+    const j = d === '/' ? `/${n}` : `${d}/${n}`;
+    return this.normalizeRuta(j);
   }
 }

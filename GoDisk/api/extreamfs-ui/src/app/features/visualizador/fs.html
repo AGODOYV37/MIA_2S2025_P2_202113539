@@ -1,17 +1,19 @@
 <h2 class="title">Visualizador del Sistema de Archivos</h2>
 
-
-
 <div *ngIf="loading" class="state">Actualizando…</div>
 <div *ngIf="!loading && error" class="state error">{{ error }}</div>
 
-
-
 <div *ngIf="!loading && !error">
-  <!-- Breadcrumb simple -->
+  <!-- Breadcrumb -->
   <div class="crumbs">
     <ng-container *ngFor="let c of crumbs(); let last = last">
-      <a *ngIf="!last" (click)="goCrumb(c.abs)">{{ c.label }}</a>
+      <!-- Los intermedios son links -->
+      <a *ngIf="!last"
+         [routerLink]="['/visualizador', id, 'fs']"
+         [queryParams]="{ ruta: c.abs }">
+        {{ c.label }}
+      </a>
+      <!-- El último es texto plano -->
       <span *ngIf="last">{{ c.label }}</span>
       <span *ngIf="!last" class="sep">/</span>
     </ng-container>
@@ -20,21 +22,28 @@
   <div class="hint">Navegue entre carpetas; los archivos se habilitarán más adelante</div>
 
   <header class="fs-head">
-  <button class="back" type="button" (click)="goUp()">
-    {{ isRoot ? '⟵ Volver' : '⟵ Arriba' }}
-  </button>
-  <div class="crumb">Ruta: <code>{{ ruta }}</code></div>
-</header>
+    <!-- Botón atrás/arriba usa RouterLink para empujar la URL -->
+    <button class="back"
+            type="button"
+            [routerLink]="['/visualizador', id, 'fs']"
+            [queryParams]="{ ruta: isRoot ? '/' : parent(ruta) }">
+      {{ isRoot ? '⟵ Volver' : '⟵ Arriba' }}
+    </button>
+    <div class="crumb">Ruta: <code>{{ ruta }}</code></div>
+  </header>
 
   <div class="grid">
-    <!-- Carpetas -->
-    <a class="item dir" *ngFor="let d of dirs" (click)="goTo(d)">
+    <!-- Carpetas: navegamos declarativamente a su ruta absoluta -->
+    <a class="item dir"
+       *ngFor="let d of dirs"
+       [routerLink]="['/visualizador', id, 'fs']"
+       [queryParams]="{ ruta: d.abs }">
       <div class="ico">📁</div>
       <div class="name" [title]="d.name">{{ d.name }}</div>
       <div class="meta">Carpeta</div>
     </a>
 
-    <!-- Archivos (por ahora sin acción) -->
+    <!-- Archivos (aún sin acción) -->
     <div class="item file" *ngFor="let f of files">
       <div class="ico">📄</div>
       <div class="name" [title]="f.name">{{ f.name }}</div>

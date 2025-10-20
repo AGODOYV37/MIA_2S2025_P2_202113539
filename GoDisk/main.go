@@ -10,10 +10,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/auth"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/catalog"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/commands"
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/ext2"
@@ -73,29 +75,172 @@ func (a *App) handleListMounts(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(out)
 }
 
+func (a *App) handleFSLS(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "solo GET", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+
+	sess, ok := auth.Current()
+	if !ok || sess == nil {
+		writeJSONError(w, http.StatusUnauthorized, "requiere login")
+		return
+	}
+
+	id := strings.TrimSpace(r.URL.Query().Get("id"))
+	ruta := strings.TrimSpace(r.URL.Query().Get("ruta"))
+	if ruta == "" {
+		ruta = "/"
+	}
+	if id == "" {
+		writeJSONError(w, http.StatusBadRequest, "fs/ls: falta ?id=")
+		return
+	}
+
+	if id != strings.TrimSpace(sess.ID) {
+		writeJSONError(w, http.StatusForbidden, "fs/ls: id no coincide con la sesión activa")
+		return
+	}
+
+	rep, err := reports.BuildLS(a.reg, id, ruta)
+	if err != nil {
+		msg := strings.ToLower(err.Error())
+		if strings.Contains(msg, "permiso") || strings.Contains(msg, "sin permiso") {
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(rep)
+}
+
+// Respuesta simple para el explorador
+type fsFindResp struct {
+	Ruta  string   `json:"ruta"`
+	Dirs  []string `json:"dirs"`
+	Files []string `json:"files"`
+}
+
 func (a *App) handleFSFind(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "solo GET", http.StatusMethodNotAllowed)
 		return
 	}
+	id := strings.TrimSpace(r.URL.Query().Get("id"))
 	ruta := strings.TrimSpace(r.URL.Query().Get("ruta"))
 	if ruta == "" {
 		ruta = "/"
 	}
-	name := strings.TrimSpace(r.URL.Query().Get("name"))
-	if name == "" {
-		name = "*"
+	if !strings.HasPrefix(ruta, "/") {
+		ruta = "/" + ruta
+	}
+	ruta = strings.ReplaceAll(ruta, "//", "/")
+
+	// ===== Permisos de sesión =====
+	sess, err := auth.Require()
+	if err != nil {
+		http.Error(w, "requiere login", http.StatusUnauthorized)
+		return
+	}
+	// Solo puede explorar el ID con el que inició sesión
+	if !strings.EqualFold(sess.ID, id) {
+		http.Error(w, "acceso denegado: ID no coincide con la sesión", http.StatusForbidden)
+		return
 	}
 
-	items, err := usersvc.Find(a.reg, ruta, name) // usa sesión actual p/ permisos
+	items, err := ext2.Find(a.reg, id, ruta, "*", sess.UID, sess.GID, sess.IsRoot)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeJSON(w, map[string]any{
-		"ruta":  ruta,
-		"name":  name,
-		"items": items, // []string (rutas absolutas)
+
+	type childInfo struct {
+		abs       string
+		seenExact bool
+		hasDesc   bool
+	}
+	children := map[string]*childInfo{}
+
+	normJoin := func(base, name string) string {
+		if base == "/" {
+			return "/" + name
+		}
+		return strings.ReplaceAll(base+"/"+name, "//", "/")
+	}
+
+	for _, p := range items {
+		if p == ruta {
+			continue
+		}
+
+		if ruta != "/" {
+			if !strings.HasPrefix(p, ruta+"/") {
+				continue
+			}
+		} else {
+			if !strings.HasPrefix(p, "/") {
+				continue
+			}
+		}
+
+		rel := strings.TrimPrefix(p, ruta)
+		rel = strings.TrimPrefix(rel, "/")
+		if rel == "" {
+			continue
+		}
+
+		first := rel
+		if i := strings.IndexByte(rel, '/'); i >= 0 {
+			first = rel[:i]
+		}
+
+		ci := children[first]
+		if ci == nil {
+			ci = &childInfo{abs: normJoin(ruta, first)}
+			children[first] = ci
+		}
+
+		if strings.Contains(rel, "/") {
+			ci.hasDesc = true
+		} else {
+			ci.seenExact = true
+		}
+	}
+
+	var dirs, files []string
+
+	for name, ci := range children {
+		if ci.hasDesc {
+			dirs = append(dirs, name)
+			continue
+		}
+		if ci.seenExact {
+
+			if _, err := ext2.Find(a.reg, id, ci.abs, "*", sess.UID, sess.GID, sess.IsRoot); err == nil {
+
+				dirs = append(dirs, name)
+			} else {
+
+				files = append(files, name)
+			}
+		}
+	}
+
+	sort.Strings(dirs)
+	sort.Strings(files)
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_ = json.NewEncoder(w).Encode(fsFindResp{
+		Ruta:  ruta,
+		Dirs:  dirs,
+		Files: files,
 	})
 }
 
@@ -799,6 +944,7 @@ func runHTTP(address string) error {
 	mux.HandleFunc("/api/logout", app.handleLogout)
 	mux.HandleFunc("/api/mounts", app.handleListMounts)
 	mux.HandleFunc("/api/fs/find", app.handleFSFind)
+	mux.HandleFunc("/api/fs/ls", app.handleFSLS)
 
 	fmt.Println("HTTP API escuchando en", address)
 	return http.ListenAndServe(address, mux)

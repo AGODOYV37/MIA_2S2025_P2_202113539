@@ -1,11 +1,12 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { LSReport } from './reports';
 
-export interface FindRes {
+export interface FsFindResp {
   ruta: string;
-  name: string;
-  items: string[]; 
+  dirs: string[];
+  files: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -13,10 +14,17 @@ export class FsService {
   private http = inject(HttpClient);
   private base = '/api/fs';
 
-  find(ruta: string, name = '*'): Observable<FindRes> {
-    return this.http.get<FindRes>(`${this.base}/find`, {
-      params: { ruta, name, t: Date.now().toString() }
+
+  ls(id: string, ruta: string = '/'): Observable<LSReport> {
+    return this.http.get<LSReport>(`${this.base}/ls`, {
+      params: { id, ruta, t: Date.now().toString() }
     });
-    
+  }
+
+
+  findList(id: string, ruta: string = '/'): Observable<FsFindResp> {
+    return this.http.get<FsFindResp>(`${this.base}/find`, {
+      params: { id, ruta, t: Date.now().toString() }
+    });
   }
 }

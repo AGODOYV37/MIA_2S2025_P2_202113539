@@ -1,4 +1,3 @@
-// GoDisk/api/extreamfs-ui/src/app/features/visualizador/part.ts
 import { Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -7,6 +6,7 @@ import { forkJoin } from 'rxjs';
 
 import { Reports, DiskReport } from '../../core/services/reports';
 import { MountsService, MountView } from '../../core/services/mount';
+import { AuthService } from '../../core/services/auth'; // ← NUEVO
 
 type PartCard = {
   kind: 'P' | 'L';
@@ -37,7 +37,8 @@ export class VisualizadorPartComponent implements OnInit {
     private mountsSvc: MountsService,
     private route: ActivatedRoute,
     private zone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    public auth: AuthService,             // ← NUEVO
   ) {}
 
   ngOnInit(): void {
@@ -81,15 +82,10 @@ export class VisualizadorPartComponent implements OnInit {
         next: ({ disk, mounts }) =>
           this.zone.run(() => {
             this.diskPath = disk?.diskPath || '';
-
-            // Construye tarjetas de partición con matching “inteligente”
             this.parts = this.buildParts(disk, mounts || []);
-
-            // Si nada calzó (nombres raros), asigna por orden del disco
             if (!this.parts.length) {
               this.parts = this.buildPartsLoose(disk, mounts || []);
             }
-
             this.cdr.detectChanges();
           }),
         error: (err) =>
@@ -105,7 +101,6 @@ export class VisualizadorPartComponent implements OnInit {
       });
   }
 
-   
   baseName(p: string): string {
     if (!p) return '';
     const clean = p.replace(/\\+/g, '/');
@@ -114,80 +109,70 @@ export class VisualizadorPartComponent implements OnInit {
   }
 
   private buildParts(rep: DiskReport, mounts: MountView[]): PartCard[] {
-  const prim = (rep?.segments || []).filter((s: any) => s?.kind === 'P');
-  const logi = (rep?.extended?.segments || []).filter((s: any) => s?.kind === 'L');
+    const prim = (rep?.segments || []).filter((s: any) => s?.kind === 'P');
+    const logi = (rep?.extended?.segments || []).filter((s: any) => s?.kind === 'L');
 
-  const normPath = (p: string) => (p || '').replace(/\\+/g, '/').toLowerCase().trim();
-  const normName = (s: string) => (s || '').replace(/\s+/g, '').toLowerCase().trim();
+    const normPath = (p: string) => (p || '').replace(/\\+/g, '/').toLowerCase().trim();
+    const normName = (s: string) => (s || '').replace(/\s+/g, '').toLowerCase().trim();
 
-  // Montajes del MISMO disco
-  const onThisDisk = (mounts || []).filter(
-    (m) => normPath(m.diskPath) === normPath(rep?.diskPath || '')
-  );
+    const onThisDisk = (mounts || []).filter(
+      (m) => normPath(m.diskPath) === normPath(rep?.diskPath || '')
+    );
 
-  // Índices para match rápido
-  const byStartSize = new Map<string, MountView>();
-  for (const m of onThisDisk) {
-    const key = `${Number(m.start)||0}|${Number(m.size)||0}`;
-    byStartSize.set(key, m);
-  }
-
-  const byName = new Map<string, MountView>();
-  for (const m of onThisDisk) {
-    const k = normName(m.name || '');
-    if (k) byName.set(k, m);
-  }
-
-  // Algunos reportes traen nombres “raros” (Part11, Part12…)
-  const fixWeird = (raw: string) => {
-    const s = raw || '';
-    // 1) Part11 -> Part1  (dígito repetido)
-    const m1 = s.match(/^(.*?)(\d)\2$/);
-    if (m1) return m1[1] + m1[2];
-    // 2) Part1N -> PartN  (prefijo "Part1" + índice real)
-    const m2 = s.match(/^part1(\d+)$/i);
-    if (m2) return 'Part' + m2[1];
-    return s;
-  };
-
-  const findMountId = (seg: any): string | undefined => {
-    const key = `${Number(seg.start)||0}|${Number(seg.size)||0}`;
-    const hitByPos = byStartSize.get(key);
-    if (hitByPos) return hitByPos.id;
-
-    const candidates = [seg.name, fixWeird(seg.name)]
-      .map(normName)
-      .filter(Boolean);
-
-    for (const c of candidates) {
-      const exact = byName.get(c);
-      if (exact) return exact.id;
-    }
-    // tolerante
+    const byStartSize = new Map<string, MountView>();
     for (const m of onThisDisk) {
-      const nm = normName(m.name || '');
-      if (nm && candidates.some(c => nm.startsWith(c) || c.startsWith(nm) || nm.includes(c))) {
-        return m.id;
-      }
+      const key = `${Number(m.start)||0}|${Number(m.size)||0}`;
+      byStartSize.set(key, m);
     }
-    return undefined;
-  };
 
-  const mk = (s: any): PartCard => ({
-    kind: s.kind,
-    name: s.name || s.label || (s.kind === 'P' ? 'Primaria' : 'Lógica'),
-    start: s.start,
-    end: s.end,
-    size: s.size,
-    percent: s.percent,
-    mountId: findMountId(s),
-  });
+    const byName = new Map<string, MountView>();
+    for (const m of onThisDisk) {
+      const k = normName(m.name || '');
+      if (k) byName.set(k, m);
+    }
 
-  return [...prim.map(mk), ...logi.map(mk)];
-}
+    const fixWeird = (raw: string) => {
+      const s = raw || '';
+      const m1 = s.match(/^(.*?)(\d)\2$/);
+      if (m1) return m1[1] + m1[2];
+      const m2 = s.match(/^part1(\d+)$/i);
+      if (m2) return 'Part' + m2[1];
+      return s;
+    };
 
+    const findMountId = (seg: any): string | undefined => {
+      const key = `${Number(seg.start)||0}|${Number(seg.size)||0}`;
+      const hitByPos = byStartSize.get(key);
+      if (hitByPos) return hitByPos.id;
 
-  // Fallback: asigna por orden los IDs de montajes del mismo disco
+      const candidates = [seg.name, fixWeird(seg.name)].map(normName).filter(Boolean);
+
+      for (const c of candidates) {
+        const exact = byName.get(c);
+        if (exact) return exact.id;
+      }
+      for (const m of onThisDisk) {
+        const nm = normName(m.name || '');
+        if (nm && candidates.some(c => nm.startsWith(c) || c.startsWith(nm) || nm.includes(c))) {
+          return m.id;
+        }
+      }
+      return undefined;
+    };
+
+    const mk = (s: any): PartCard => ({
+      kind: s.kind,
+      name: s.name || s.label || (s.kind === 'P' ? 'Primaria' : 'Lógica'),
+      start: s.start,
+      end: s.end,
+      size: s.size,
+      percent: s.percent,
+      mountId: findMountId(s),
+    });
+
+    return [...prim.map(mk), ...logi.map(mk)];
+  }
+
   private buildPartsLoose(rep: DiskReport, mounts: MountView[]): PartCard[] {
     const prim = (rep?.segments || []).filter((s: any) => s?.kind === 'P');
     const logi = (rep?.extended?.segments || []).filter((s: any) => s?.kind === 'L');
@@ -200,15 +185,12 @@ export class VisualizadorPartComponent implements OnInit {
     const take = (list: any[], labelKind: 'P' | 'L') =>
       list.map((s: any, i: number): PartCard => ({
         kind: s.kind,
-        name:
-          s.name ||
-          s.label ||
-          (labelKind === 'P' ? `Primaria ${i + 1}` : `Lógica ${i + 1}`),
+        name: s.name || s.label || (labelKind === 'P' ? `Primaria ${i + 1}` : `Lógica ${i + 1}`),
         start: s.start,
         end: s.end,
         size: s.size,
         percent: s.percent,
-        mountId: onThisDisk[i]?.id, // asignación por posición
+        mountId: onThisDisk[i]?.id,
       }));
 
     return [...take(prim, 'P'), ...take(logi, 'L')];

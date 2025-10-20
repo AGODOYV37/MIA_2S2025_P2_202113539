@@ -13,31 +13,18 @@
     No se detectaron particiones en este disco.
   </div>
 
-  <div *ngIf="parts.length" class="grid">
-    <ng-container *ngFor="let p of parts">
-      <!-- Montada: link al explorador de archivos /visualizador/:id/fs?ruta=/ -->
-      <a *ngIf="p.mountId as mid; else notMounted"
-         class="part"
-         [class.pm]="p.kind === 'P'"
-         [class.lg]="p.kind === 'L'"
-         [routerLink]="['/visualizador', mid, 'fs']"
-         [queryParams]="{ ruta: '/' }">
-        <div class="icon" [attr.aria-label]="p.kind === 'P' ? 'Partición primaria' : 'Partición lógica'">
-          {{ p.kind === 'P' ? '🧱' : '🧩' }}
-        </div>
-        <div class="name" [title]="p.name">{{ p.name }}</div>
-        <div class="sub">
-          {{ p.kind === 'P' ? 'Primaria' : 'Lógica' }} •
-          {{ p.size | number }} bytes ({{ p.percent | number:'1.0-2' }}%)
-        </div>
-        <div class="status">Montada: <code>{{ mid }}</code></div>
-      </a>
+  <!-- Sesión actual -->
+  <ng-container *ngIf="(auth.session$ | async) as s">
+    <div *ngIf="parts.length" class="grid">
+      <ng-container *ngFor="let p of parts">
 
-      <!-- No montada: tarjeta sin routerLink -->
-      <ng-template #notMounted>
-        <div class="part disabled"
-             [class.pm]="p.kind === 'P'"
-             [class.lg]="p.kind === 'L'">
+        <!-- Acceso permitido SOLO a la partición de la sesión -->
+        <a *ngIf="p.mountId && p.mountId === s.mountId; else disabledCard"
+           class="part"
+           [class.pm]="p.kind === 'P'"
+           [class.lg]="p.kind === 'L'"
+           [routerLink]="['/visualizador', p.mountId, 'fs']"
+           [queryParams]="{ ruta: '/' }">
           <div class="icon" [attr.aria-label]="p.kind === 'P' ? 'Partición primaria' : 'Partición lógica'">
             {{ p.kind === 'P' ? '🧱' : '🧩' }}
           </div>
@@ -46,11 +33,31 @@
             {{ p.kind === 'P' ? 'Primaria' : 'Lógica' }} •
             {{ p.size | number }} bytes ({{ p.percent | number:'1.0-2' }}%)
           </div>
-          <div class="status off">No montada</div>
-        </div>
-      </ng-template>
-    </ng-container>
-  </div>
+          <div class="status">Montada: <code>{{ p.mountId }}</code></div>
+        </a>
+
+        <!-- Deshabilitada si no está montada o pertenece a otra sesión -->
+        <ng-template #disabledCard>
+          <div class="part disabled"
+               [class.pm]="p.kind === 'P'"
+               [class.lg]="p.kind === 'L'">
+            <div class="icon" [attr.aria-label]="p.kind === 'P' ? 'Partición primaria' : 'Partición lógica'">
+              {{ p.kind === 'P' ? '🧱' : '🧩' }}
+            </div>
+            <div class="name" [title]="p.name">{{ p.name }}</div>
+            <div class="sub">
+              {{ p.kind === 'P' ? 'Primaria' : 'Lógica' }} •
+              {{ p.size | number }} bytes ({{ p.percent | number:'1.0-2' }}%)
+            </div>
+            <div class="status off">
+              {{ p.mountId ? 'Restringida' : 'No montada' }}
+            </div>
+          </div>
+        </ng-template>
+
+      </ng-container>
+    </div>
+  </ng-container>
 
   <p style="margin-top:14px;">
     <a routerLink="/visualizador">⟵ Volver</a>
