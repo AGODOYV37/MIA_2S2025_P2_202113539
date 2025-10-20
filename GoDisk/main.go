@@ -73,6 +73,32 @@ func (a *App) handleListMounts(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(out)
 }
 
+func (a *App) handleFSFind(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "solo GET", http.StatusMethodNotAllowed)
+		return
+	}
+	ruta := strings.TrimSpace(r.URL.Query().Get("ruta"))
+	if ruta == "" {
+		ruta = "/"
+	}
+	name := strings.TrimSpace(r.URL.Query().Get("name"))
+	if name == "" {
+		name = "*"
+	}
+
+	items, err := usersvc.Find(a.reg, ruta, name) // usa sesión actual p/ permisos
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, map[string]any{
+		"ruta":  ruta,
+		"name":  name,
+		"items": items, // []string (rutas absolutas)
+	})
+}
+
 func (a *App) handleReportMBR(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.URL.Query().Get("id"))
 	if id == "" {
@@ -772,6 +798,7 @@ func runHTTP(address string) error {
 	mux.HandleFunc("/api/login", app.handleLogin)
 	mux.HandleFunc("/api/logout", app.handleLogout)
 	mux.HandleFunc("/api/mounts", app.handleListMounts)
+	mux.HandleFunc("/api/fs/find", app.handleFSFind)
 
 	fmt.Println("HTTP API escuchando en", address)
 	return http.ListenAndServe(address, mux)

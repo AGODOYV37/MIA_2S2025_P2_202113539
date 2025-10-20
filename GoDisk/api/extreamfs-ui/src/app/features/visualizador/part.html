@@ -9,22 +9,19 @@
     <span><b>ID base:</b> {{ id }}</span>
   </div>
 
-  <!-- Sin particiones -->
   <div *ngIf="parts.length === 0" class="state">
     No se detectaron particiones en este disco.
   </div>
 
-  <!-- Grid de particiones -->
   <div *ngIf="parts.length" class="grid">
     <ng-container *ngFor="let p of parts">
-      <!-- Montada: tarjeta clickable a /visualizador/<mountId> -->
-      <a
-        *ngIf="p.mountId as mid"
-        class="part"
-        [class.pm]="p.kind === 'P'"
-        [class.lg]="p.kind === 'L'"
-        [routerLink]="['/visualizador', mid]"
-      >
+      <!-- Montada: link al explorador de archivos /visualizador/:id/fs?ruta=/ -->
+      <a *ngIf="p.mountId as mid; else notMounted"
+         class="part"
+         [class.pm]="p.kind === 'P'"
+         [class.lg]="p.kind === 'L'"
+         [routerLink]="['/visualizador', mid, 'fs']"
+         [queryParams]="{ ruta: '/' }">
         <div class="icon" [attr.aria-label]="p.kind === 'P' ? 'Partición primaria' : 'Partición lógica'">
           {{ p.kind === 'P' ? '🧱' : '🧩' }}
         </div>
@@ -33,29 +30,25 @@
           {{ p.kind === 'P' ? 'Primaria' : 'Lógica' }} •
           {{ p.size | number }} bytes ({{ p.percent | number:'1.0-2' }}%)
         </div>
-        <div class="status">
-          Montada: <code>{{ mid }}</code>
-        </div>
+        <div class="status">Montada: <code>{{ mid }}</code></div>
       </a>
 
-      <!-- NO montada: tarjeta no clickable (sin routerLink) -->
-      <div
-        *ngIf="!p.mountId"
-        class="part disabled"
-        [class.pm]="p.kind === 'P'"
-        [class.lg]="p.kind === 'L'"
-        tabindex="-1"
-      >
-        <div class="icon" [attr.aria-label]="p.kind === 'P' ? 'Partición primaria' : 'Partición lógica'">
-          {{ p.kind === 'P' ? '🧱' : '🧩' }}
+      <!-- No montada: tarjeta sin routerLink -->
+      <ng-template #notMounted>
+        <div class="part disabled"
+             [class.pm]="p.kind === 'P'"
+             [class.lg]="p.kind === 'L'">
+          <div class="icon" [attr.aria-label]="p.kind === 'P' ? 'Partición primaria' : 'Partición lógica'">
+            {{ p.kind === 'P' ? '🧱' : '🧩' }}
+          </div>
+          <div class="name" [title]="p.name">{{ p.name }}</div>
+          <div class="sub">
+            {{ p.kind === 'P' ? 'Primaria' : 'Lógica' }} •
+            {{ p.size | number }} bytes ({{ p.percent | number:'1.0-2' }}%)
+          </div>
+          <div class="status off">No montada</div>
         </div>
-        <div class="name" [title]="p.name">{{ p.name }}</div>
-        <div class="sub">
-          {{ p.kind === 'P' ? 'Primaria' : 'Lógica' }} •
-          {{ p.size | number }} bytes ({{ p.percent | number:'1.0-2' }}%)
-        </div>
-        <div class="status off">No montada</div>
-      </div>
+      </ng-template>
     </ng-container>
   </div>
 

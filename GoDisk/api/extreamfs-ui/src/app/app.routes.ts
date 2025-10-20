@@ -17,5 +17,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/visualizador/part').then(m => m.VisualizadorPartComponent)
   },
+  { path: 'visualizador/:id/fs', loadComponent: () => import('./features/visualizador/fs').then(m => m.FsExplorerComponent) },
+
     { path: '**', redirectTo: '' }
 ];
