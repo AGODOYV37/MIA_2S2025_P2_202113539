@@ -8,7 +8,6 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
-// --- Resolver una ruta absoluta (ya separada en comps) a índice de inodo.
 // Devuelve (inoIdx, existe, error)
 func resolvePathInode(mp *mount.MountedPartition, sb SuperBloque, comps []string) (int32, bool, error) {
 	cur := int32(0) // raíz
@@ -22,7 +21,6 @@ func resolvePathInode(mp *mount.MountedPartition, sb SuperBloque, comps []string
 	return cur, true, nil
 }
 
-// --- Leer todo el contenido (bytes) de un archivo por índice de inodo
 func readDataFromFileInode(mp *mount.MountedPartition, sb SuperBloque, idx int32) ([]byte, error) {
 	ino, err := readInodeAt(mp, sb, idx)
 	if err != nil {
@@ -104,8 +102,6 @@ func listDirEntries(mp *mount.MountedPartition, sb SuperBloque, dirIno int32) ([
 	return out, nil
 }
 
-// --- Copiar un archivo (srcIno) como NUEVO archivo dentro de (dstParentIno) con nombre dstName
-// NO guarda bitmaps ni SB: el caller lo hace (para agrupar escrituras).
 func copyFileToNew(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []byte,
 	srcIno, dstParentIno int32, dstName string, uid, gid int) error {
 
@@ -129,7 +125,6 @@ func copyFileToNew(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []byt
 	MarkInode(bmIn, newIdx, true)
 	sb.SFreeInodesCount--
 
-	// crear inodo nuevo (mismos permisos del original)
 	ino := newInodoArchivo(len(data))
 	ino.IUid = int32(uid)
 	ino.IGid = int32(gid)
@@ -156,7 +151,6 @@ func copyFileToNew(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []byt
 	return nil
 }
 
-// --- Utilidad para formar rutas de logging (evita //)
 func joinAbs(base, name string) string {
 	if base == "" || base == "/" {
 		return "/" + name

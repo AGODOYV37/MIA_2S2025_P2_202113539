@@ -25,7 +25,6 @@ func CopyNode(reg *mount.Registry, id, srcPath, destDir string, uid, gid int, is
 		return err
 	}
 
-	// --- Origen ---
 	srcComps, err := splitPath(srcPath)
 	if err != nil {
 		return err
@@ -49,7 +48,6 @@ func CopyNode(reg *mount.Registry, id, srcPath, destDir string, uid, gid int, is
 		return nil
 	}
 
-	// --- Destino (carpeta existente y escribible) ---
 	dstComps, err := splitPath(destDir)
 	if err != nil {
 		return err
@@ -72,7 +70,6 @@ func CopyNode(reg *mount.Registry, id, srcPath, destDir string, uid, gid int, is
 		return fmt.Errorf("copy: sin permiso de escritura en carpeta destino")
 	}
 
-	// --- Evitar copiar en sí mismo o subcarpeta propia ---
 	clean := func(comps []string) string {
 		s := "/" + strings.Trim(strings.Join(comps, "/"), "/")
 		if s == "" {
@@ -110,16 +107,14 @@ func CopyNode(reg *mount.Registry, id, srcPath, destDir string, uid, gid int, is
 		return writeAt(mp.DiskPath, mp.Start, sb)
 	}
 
-	// Carpeta (recursivo, omite hijos sin permisos)
 	if err := copyDirToNewSkip(mp, &sb, bmIn, bmBl, srcIno, dstIno, baseName, uid, gid, isRoot, strings.TrimPrefix(srcAbs, "/")); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Variante de copyDirToNew que **omite** hijos sin permisos y continúa
 func copyDirToNewSkip(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []byte, srcIno, dstParentIno int32, dstName string, uid, gid int, isRoot bool, srcAbs string) error {
-	// crear carpeta destino
+
 	newIdx := FirstFree(bmIn)
 	if newIdx < 0 {
 		return errors.New("copy: no hay inodos libres para carpeta")
@@ -164,7 +159,6 @@ func copyDirToNewSkip(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []
 		return err
 	}
 
-	// copiar hijos (omitimos sin permiso)
 	children, err := listDirEntries(mp, *sb, srcIno)
 	if err != nil {
 		return err
@@ -184,7 +178,7 @@ func copyDirToNewSkip(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []
 				return err
 			}
 		} else {
-			// ¿colisión dentro del nuevo directorio?
+
 			if lookupInDir(mp, *sb, newIdx, ch.name) >= 0 {
 				fmt.Printf("copy: '%s' ya existe dentro de '%s/%s' (omitido)\n", ch.name, srcAbs, dstName)
 				continue

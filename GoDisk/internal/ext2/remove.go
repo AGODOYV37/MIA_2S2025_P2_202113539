@@ -59,17 +59,17 @@ func Remove(reg *mount.Registry, id, absPath string, uid, gid int) error {
 		return err
 	}
 
-	// 1) Pre-chequeo de permisos en TODO el subárbol (all-or-nothing)
+	// Pre-chequeo de permisos en TODO el subárbol
 	if ok := subtreeWritable(mp, sb, targetIno, uid, gid); !ok {
 		return fmt.Errorf("remove: permiso denegado en algún elemento dentro de %q", absPath)
 	}
 
-	// 2) Borrado recursivo real
+	//  Borrado recursivo real
 	if err := deleteNode(mp, &sb, bmIn, bmBl, parentIno, targetName, targetIno, tIno); err != nil {
 		return err
 	}
 
-	// 3) Persistir bitmaps y SB
+	// Persistir bitmaps y SB
 	sb.SFirtsIno = FirstFree(bmIn)
 	sb.SFirstBlo = FirstFree(bmBl)
 	if err := saveBitmaps(mp, sb, bmIn, bmBl); err != nil {
@@ -78,9 +78,7 @@ func Remove(reg *mount.Registry, id, absPath string, uid, gid int) error {
 	return writeAt(mp.DiskPath, mp.Start, sb)
 }
 
-// --- helpers ---
-
-// Recorre un path de carpetas que DEBEN existir (sin crear).
+// Recorre un path de carpetas que deben existir
 func walkExistingDirPath(mp *mount.MountedPartition, sb *SuperBloque, comps []string) (int32, error) {
 	cur := int32(0)
 	for i, name := range comps {
@@ -125,7 +123,7 @@ func subtreeWritable(mp *mount.MountedPartition, sb SuperBloque, idx int32, uid,
 }
 
 func hasWrite(uid, gid int, ino Inodo) bool {
-	// Root (según bootstrap: uid=1) — ajusta si usas otro UID para root.
+
 	if uid == 1 {
 		return true
 	}
@@ -172,7 +170,7 @@ func listDirChildren(mp *mount.MountedPartition, sb SuperBloque, dirIno int32) (
 }
 
 func deleteNode(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []byte, parentIno int32, name string, idx int32, ino Inodo) error {
-	// 1) Si carpeta, borrar hijos primero (pre-check ya garantizó permisos)
+
 	if ino.IType == 0 {
 		children, err := listDirChildren(mp, *sb, idx)
 		if err != nil {
@@ -187,7 +185,7 @@ func deleteNode(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []byte, 
 				return err
 			}
 		}
-		// liberar bloques de la carpeta
+
 		for i, ptr := range ino.IBlock {
 			if ptr >= 0 {
 				MarkBlock(bmBl, ptr, false)
@@ -200,22 +198,21 @@ func deleteNode(mp *mount.MountedPartition, sb *SuperBloque, bmIn, bmBl []byte, 
 			return err
 		}
 	} else {
-		// 2) Archivo: liberar todos sus bloques (dejar tamaño 0)
+
 		if err := writeDataToFileInode(mp, sb, bmBl, idx, []byte{}); err != nil {
 			return err
 		}
 	}
 
-	// 3) Quitar la entrada del padre
 	if err := removeDirEntry(mp, *sb, parentIno, name); err != nil {
 		return err
 	}
 
-	// 4) Liberar inodo
+	//  Liberar inodo
 	MarkInode(bmIn, idx, false)
 	sb.SFreeInodesCount++
 
-	// (opcional) limpiar el inodo en disco
+	// ( limpiar el inodo en disco
 	var zero Inodo
 	if err := writeInodeAt(mp, *sb, idx, zero); err != nil {
 		return err

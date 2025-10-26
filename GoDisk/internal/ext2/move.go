@@ -31,8 +31,7 @@ func MoveNode(reg *mount.Registry, id, srcPath, destDir string, uid, gid int, is
 	if srcPath == "/" {
 		return errors.New("move: no puedes mover '/'")
 	}
-	// Bloquea mover una carpeta dentro de sí misma o su subárbol por texto.
-	// El sufijo "/" evita falsos positivos con archivos: "/a.txt" no matchea "/a.txt.bak".
+
 	if destDir == srcPath || strings.HasPrefix(destDir, srcPath+"/") {
 		return fmt.Errorf("move: no puedes mover %q dentro de %q", srcPath, destDir)
 	}
@@ -133,16 +132,14 @@ func MoveNode(reg *mount.Registry, id, srcPath, destDir string, uid, gid int, is
 	return writeAt(mp.DiskPath, mp.Start, sb)
 }
 
-// -------- helpers específicos de move --------
-
 // true si "candidate" está dentro del subárbol cuyo raíz es "ancestor"
 func isDescendant(mp *mount.MountedPartition, sb SuperBloque, ancestor, candidate int32) (bool, error) {
 	if ancestor == candidate {
 		return true, nil
 	}
-	// subir desde candidate hasta root usando ".."
+
 	cur := candidate
-	limit := 1024 // corta ciclos anómalos
+	limit := 1024 // corta ciclos
 	for limit > 0 && cur != 0 {
 		p, err := parentOf(mp, sb, cur)
 		if err != nil {
@@ -151,7 +148,7 @@ func isDescendant(mp *mount.MountedPartition, sb SuperBloque, ancestor, candidat
 		if p == ancestor {
 			return true, nil
 		}
-		if p == cur { // por si acaso
+		if p == cur {
 			break
 		}
 		cur = p
@@ -176,6 +173,6 @@ func parentOf(mp *mount.MountedPartition, sb SuperBloque, dirIno int32) (int32, 
 	if err != nil {
 		return -1, err
 	}
-	// convención: entry[1] = ".."
+
 	return bf.BContent[1].BInodo, nil
 }

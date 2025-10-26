@@ -11,7 +11,6 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
-// Edit ahora acepta `cont` que puede ser texto literal o ruta a un archivo del SO.
 func Edit(reg *mount.Registry, path string, cont string) error {
 	path = strings.TrimSpace(path)
 	if path == "" || !strings.HasPrefix(path, "/") {
@@ -23,8 +22,6 @@ func Edit(reg *mount.Registry, path string, cont string) error {
 		return errors.New("edit: requiere sesión (login)")
 	}
 
-	// Resolver contenido: si cont apunta a un archivo existente en el SO, se usa;
-	// en caso contrario, se trata como texto literal (tal cual).
 	data, err := resolveEditContent(cont)
 	if err != nil {
 		return err
@@ -35,7 +32,7 @@ func Edit(reg *mount.Registry, path string, cont string) error {
 		return err
 	}
 
-	// Journaling (EXT3): guardamos el texto final aplicado
+	// Journaling
 	_ = ext3.AppendJournalIfExt3(reg, s.ID, "EDIT", path, string(data))
 	return nil
 }
@@ -43,13 +40,13 @@ func Edit(reg *mount.Registry, path string, cont string) error {
 func resolveEditContent(cont string) ([]byte, error) {
 	cont = strings.TrimSpace(cont)
 	if cont == "" {
-		// Permite vaciar el archivo
+
 		return []byte{}, nil
 	}
 	// Intentar leerlo como ruta de archivo del SO
 	if b, err := os.ReadFile(cont); err == nil {
 		return b, nil
 	}
-	// Si no existe como archivo, usarlo como texto literal
+
 	return []byte(cont), nil
 }

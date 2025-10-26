@@ -25,9 +25,6 @@ func ParseUGO(s string) ([3]byte, error) {
 }
 
 // Chmod cambia los bits de permisos (U,G,O) en el nodo indicado.
-//   - Si recursive=false: cambia solo el nodo de -path.
-//   - Si recursive=true: recorre el subárbol y cambia SOLO nodos pertenecientes
-//     al usuario actual (según enunciado).
 func Chmod(reg *mount.Registry, id, absPath string, perms [3]byte, recursive bool, uid, gid int, isRoot bool) error {
 	mp, ok := reg.GetByID(id)
 	if !ok {
@@ -78,8 +75,6 @@ func Chmod(reg *mount.Registry, id, absPath string, perms [3]byte, recursive boo
 
 	if !recursive {
 		// No recursivo: cambia solo el nodo apuntado
-		// (usuarios normales no llegan aquí porque usersvc ya exige root,
-		// pero dejamos la ruta limpia por claridad).
 		return setPerm(idx)
 	}
 

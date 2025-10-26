@@ -9,11 +9,6 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
-// Chown cambia el propietario del nodo en startPath (y opcionalmente su contenido).
-// Regla de permisos:
-//   - root: siempre permitido.
-//   - no root: solo puede cambiar nodos donde es propietario (IUid == uid).
-//
 // Recorrido (-r): solo entra a carpetas que puede leer (o si es root).
 func Chown(reg *mount.Registry, id, startPath, newUser string, recursive bool, actorUID, actorGID int, isRoot bool) error {
 	mp, ok := reg.GetByID(id)
@@ -63,7 +58,7 @@ func Chown(reg *mount.Registry, id, startPath, newUser string, recursive bool, a
 		}
 		// Root: siempre puede. No root: solo si es dueño actual.
 		if !isRoot && int(ino.IUid) != actorUID {
-			// avisamos y omitimos
+
 			fmt.Printf("chown: omitido (no eres dueño): %s\n", abs)
 			return nil
 		}

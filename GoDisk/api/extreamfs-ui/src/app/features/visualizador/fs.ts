@@ -27,7 +27,7 @@ export class FsExplorerComponent implements OnInit {
   dirs: DirEnt[] = [];
   files: FileEnt[] = [];
 
-  // ⬇️ Estado del visor de archivo
+  // Estado del visor de archivo
   filePath: string | null = null;
   fileText: string | null = null;
   fileLoading = false;
@@ -123,7 +123,7 @@ export class FsExplorerComponent implements OnInit {
       });
   }
 
-  // ⬇️ Abrir archivo (si es texto) en el visor
+  // Abrir archivo (si es texto) en el visor
   openFile(f: FileEnt): void {
     if (!this.id || !f?.abs) return;
 
@@ -144,7 +144,7 @@ export class FsExplorerComponent implements OnInit {
       }))
       .subscribe({
         next: (txt: string) => this.zone.run(() => {
-          // opcional: heurística mínima para “texto”
+
           const isProbablyText = !/[\x00-\x08\x0E-\x1F]/.test(txt);
           if (isProbablyText) {
             this.fileText = txt;

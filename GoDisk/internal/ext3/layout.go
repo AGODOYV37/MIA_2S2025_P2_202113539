@@ -9,10 +9,9 @@ import (
 
 const (
 	FileSystemTypeExt3       = 3
-	JournalEntrySize   int64 = 50 // enunciado
+	JournalEntrySize   int64 = 50
 )
 
-// ComputeLayoutExt3 devuelve: n, SB (con offsets), offset y tamaño del área de journal.
 func ComputeLayoutExt3(partSize int64) (int32, ext2.SuperBloque, int64, int64, error) {
 	var sb ext2.SuperBloque
 
@@ -20,8 +19,6 @@ func ComputeLayoutExt3(partSize int64) (int32, ext2.SuperBloque, int64, int64, e
 	szIn := xbin.SizeOf[ext2.Inodo]()
 	szBlk := int64(ext2.BlockSize)
 
-	// Fórmula del enunciado:
-	// size = sizeof(SB) + n*sizeOf(Journaling) + n + 3n + n*sizeOf(inodos) + 3n*sizeOf(block)
 	den := JournalEntrySize + 1 + 3 + szIn + 3*szBlk
 	n64 := (partSize - szSB) / den
 	if n64 < 2 {
@@ -29,12 +26,11 @@ func ComputeLayoutExt3(partSize int64) (int32, ext2.SuperBloque, int64, int64, e
 	}
 	n := int32(n64)
 
-	// Offsets
 	sbOff := int64(0)
-	journalOff := sbOff + szSB                        // inmediatamente tras el SB
-	bmInOff := journalOff + int64(n)*JournalEntrySize // journal ocupa n entradas
-	bmBlOff := bmInOff + int64(n)                     // 1 byte por inodo
-	inTblOff := bmBlOff + 3*int64(n)                  // 1 byte por bloque * 3n
+	journalOff := sbOff + szSB
+	bmInOff := journalOff + int64(n)*JournalEntrySize
+	bmBlOff := bmInOff + int64(n)
+	inTblOff := bmBlOff + 3*int64(n)
 	blkTblOff := inTblOff + int64(n)*szIn
 
 	sb = ext2.SuperBloque{
@@ -46,7 +42,7 @@ func ComputeLayoutExt3(partSize int64) (int32, ext2.SuperBloque, int64, int64, e
 		SMtime:           time.Now().Unix(),
 		SUmtime:          0,
 		SMntCount:        1,
-		SMagic:           ext2.MagicEXT2, // ext3 usa el mismo magic 0xEF53
+		SMagic:           ext2.MagicEXT2,
 		SInodeS:          int32(szIn),
 		SBlockS:          int32(szBlk),
 		SFirtsIno:        0,

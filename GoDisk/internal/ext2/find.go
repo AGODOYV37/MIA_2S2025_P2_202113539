@@ -10,8 +10,6 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
-// Find devuelve rutas absolutas que matchean el patrón (case-sensitive).
-// '*' = uno o más caracteres, '?' = un solo caracter.
 func Find(reg *mount.Registry, id, startPath, pattern string, uid, gid int, isRoot bool) ([]string, error) {
 	mp, ok := reg.GetByID(id)
 	if !ok {
@@ -30,7 +28,6 @@ func Find(reg *mount.Registry, id, startPath, pattern string, uid, gid int, isRo
 		return nil, errors.New("find: -path debe ser absoluto")
 	}
 
-	// inodo de inicio
 	comps, err := splitPath(startPath)
 	if err != nil {
 		return nil, err
@@ -43,7 +40,6 @@ func Find(reg *mount.Registry, id, startPath, pattern string, uid, gid int, isRo
 		return nil, fmt.Errorf("find: ruta no existe: %s", startPath)
 	}
 
-	// Debe ser carpeta y ser legible por el usuario
 	startNode, err := readInodeAt(mp, sb, startIno)
 	if err != nil {
 		return nil, err
@@ -70,7 +66,6 @@ func Find(reg *mount.Registry, id, startPath, pattern string, uid, gid int, isRo
 			return err
 		}
 
-		// Si es archivo, evaluamos el nombre y retornamos.
 		if ino.IType == 1 {
 			base := path.Base(abs)
 			if CanRead(ino, uid, gid, isRoot) && re.MatchString(base) {
@@ -79,12 +74,10 @@ func Find(reg *mount.Registry, id, startPath, pattern string, uid, gid int, isRo
 			return nil
 		}
 
-		// Carpeta: si no podemos leer, no la recorremos.
 		if !CanRead(ino, uid, gid, isRoot) {
 			return nil
 		}
 
-		// Si la propia carpeta (excepto "/") matchea el patrón, añadirla.
 		if abs != "/" && re.MatchString(path.Base(abs)) {
 			out = append(out, abs)
 		}
@@ -109,7 +102,6 @@ func Find(reg *mount.Registry, id, startPath, pattern string, uid, gid int, isRo
 	return out, walk(startIno, startAbs)
 }
 
-// '*' => .+ (uno o más), '?' => . (uno), anclado ^...$
 func globToRegex(glob string) (*regexp.Regexp, error) {
 	var b strings.Builder
 	b.WriteString("^")

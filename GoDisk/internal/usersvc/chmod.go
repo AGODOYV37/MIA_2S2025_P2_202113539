@@ -26,7 +26,7 @@ func Chmod(reg *mount.Registry, path, ugo string, recursive bool) error {
 	if err != nil {
 		return errors.New("chmod: requiere sesión (login)")
 	}
-	// Solo root puede ejecutar chmod (según enunciado)
+	// Solo root puede ejecutar chmod
 	if !s.IsRoot {
 		return errors.New("chmod: operación permitida solo para root")
 	}
@@ -40,7 +40,7 @@ func Chmod(reg *mount.Registry, path, ugo string, recursive bool) error {
 		return err
 	}
 
-	// Journal (solo EXT3; no falla si el log no se puede escribir)
+	// Journal
 	_ = ext3.AppendJournalIfExt3(reg, s.ID, "CHMOD", path, fmt.Sprintf("ugo=%s recursive=%t", ugo, recursive))
 
 	return nil

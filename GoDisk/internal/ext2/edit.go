@@ -8,8 +8,6 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
-// EditFile reemplaza completamente el contenido de un archivo existente,
-// validando permisos de lectura y escritura (o root).
 func EditFile(reg *mount.Registry, id, absPath string, data []byte, uid, gid int, isRoot bool) error {
 	mp, ok := reg.GetByID(id)
 	if !ok {
@@ -24,7 +22,6 @@ func EditFile(reg *mount.Registry, id, absPath string, data []byte, uid, gid int
 		return err
 	}
 
-	// Parsear ruta: /a/b/c.txt  => parent=/a/b  name=c.txt
 	comps, err := splitPath(absPath)
 	if err != nil {
 		return err

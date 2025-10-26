@@ -19,7 +19,6 @@ func (f *Formatter) MkfsFull(id string) error {
 	partStart := mp.Start
 	partSize := mp.Size
 
-	// Layout EXT3 con journaling como región (n * 50 bytes)
 	_, sb, jOff, jLen, err := ComputeLayoutExt3(partSize)
 	if err != nil {
 		return err
@@ -67,7 +66,7 @@ func (f *Formatter) MkfsFull(id string) error {
 		return err
 	}
 
-	// Bloque de carpeta raíz: ".", "..", "users.txt"
+	// Bloque de carpeta raíz
 	var rootBlk ext2.BlockFolder
 	copy(rootBlk.BContent[0].BName[:], []byte("."))
 	rootBlk.BContent[0].BInodo = 0
@@ -76,7 +75,6 @@ func (f *Formatter) MkfsFull(id string) error {
 	copy(rootBlk.BContent[2].BName[:], []byte("users.txt"))
 	rootBlk.BContent[2].BInodo = 1
 
-	// Escribir bloques: root folder y users.txt
 	if err := writeAt(mp.DiskPath, partStart+sb.SBlockStart+0*int64(ext2.BlockSize), rootBlk); err != nil {
 		return err
 	}

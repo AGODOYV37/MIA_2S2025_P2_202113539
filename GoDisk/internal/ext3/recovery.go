@@ -13,8 +13,6 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/xbin"
 )
 
-// -------------------- Reporte --------------------
-
 type ReplayReport struct {
 	Total   int            `json:"total"`
 	Applied int            `json:"applied"`
@@ -23,8 +21,6 @@ type ReplayReport struct {
 	ByOp    map[string]int `json:"by_op"`
 	Details []string       `json:"details"`
 }
-
-// -------------------- util local --------------------
 
 func trimNull(b []byte) string {
 	i := len(b)
@@ -83,10 +79,8 @@ func genData(n int) []byte {
 	return b
 }
 
-// Usa readAt() y writeAt() ya existentes en este paquete (journal.go, io.go)
-
 func readAllJournalEntries(mp *mount.MountedPartition, sb ext2.SuperBloque) ([]structs.Journal, error) {
-	jOff, cap := journalRegion(sb) // journalRegion ya existe en ext3/journal.go
+	jOff, cap := journalRegion(sb)
 	if cap <= 0 {
 		return nil, nil
 	}
@@ -107,11 +101,6 @@ func readAllJournalEntries(mp *mount.MountedPartition, sb ext2.SuperBloque) ([]s
 	return out, nil
 }
 
-// -------------------- Recovery con Reporte --------------------
-
-// RecoverWithReport reconstruye el FS EXT3 con journal y retorna un reporte detallado.
-// Regresa error solo en fallas críticas (leer SB, leer journal, mkfs). Las fallas por
-// entrada se registran en el reporte y la ejecución continúa.
 func RecoverWithReport(reg *mount.Registry, id string) (ReplayReport, error) {
 	rep := ReplayReport{
 		ByOp: make(map[string]int),
@@ -134,19 +123,17 @@ func RecoverWithReport(reg *mount.Registry, id string) (ReplayReport, error) {
 		return rep, err
 	}
 
-	// 1) Re-formatear EXT3
+	// Re-formatear EXT3
 	if err := NewFormatter(reg).MkfsFull(id); err != nil {
 		return rep, fmt.Errorf("recovery: mkfs ext3: %w", err)
 	}
 
-	// 2) Re-aplicar como root
+	// Re-aplicar como root
 	const rootUID, rootGID = 1, 1
 
 	for _, e := range entries {
 		rep.Total++
 
-		// Nota: ajusta los nombres de campos según tu structs.JournalInfo:
-		// Si los tienes en camelCase (IOperation, IPath, IContent), usa esos.
 		op := strings.ToUpper(strings.TrimSpace(trimNull(e.JContent.I_operation[:])))
 		pth := strings.TrimSpace(trimNull(e.JContent.I_path[:]))
 		raw := strings.TrimSpace(trimNull(e.JContent.I_content[:]))
@@ -270,7 +257,6 @@ func RecoverWithReport(reg *mount.Registry, id string) (ReplayReport, error) {
 	return rep, nil
 }
 
-// Mantén Recover para compatibilidad; retorna error solo si falla algo crítico.
 func Recover(reg *mount.Registry, id string) error {
 	_, err := RecoverWithReport(reg, id)
 	return err

@@ -19,10 +19,10 @@ export class LoginComponent {
 
   usr = '';
   pwd = '';
-  mountId = '';          // ID de partición montada (p.ej. 39A1)
+  mountId = '';          
   cargando = false;
   error = '';
-  mountedRaw = '';       // ayuda visual: listado de montajes (opcional)
+  mountedRaw = '';       
 
   submit() {
     if (!this.usr.trim() || !this.pwd.trim() || !this.mountId.trim()) {
@@ -44,11 +44,11 @@ export class LoginComponent {
       });
   }
 
-  /** Ayuda: muestra particiones montadas en texto (usa mounted -json si prefieres) */
+
   verMontajes() {
     this.cargando = true;
     this.error = '';
-    // En texto plano para máxima compatibilidad
+
     this.cmd.execute('mounted').subscribe({
       next: res => {
         this.mountedRaw = (res?.output || '').trim() || '(sin particiones montadas)';

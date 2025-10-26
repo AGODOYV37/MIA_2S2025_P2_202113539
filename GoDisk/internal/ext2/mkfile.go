@@ -89,13 +89,9 @@ func CreateOrOverwriteFile(reg *mount.Registry, id, absPath string, data []byte,
 		return err
 	}
 
-	// *** IMPORTANTE: escribir datos UNA sola vez ***
 	if err := writeDataToFileInode(mp, &sb, bmBl, inIdx, data); err != nil {
 		return err
 	}
-
-	// *** NO volver a escribir "ino" aquí ***
-	// if err := writeInodeAt(mp, sb, inIdx, ino); err != nil { return err }
 
 	if err := addDirEntry(mp, &sb, bmBl, parentIno, fileName, inIdx); err != nil {
 		return err

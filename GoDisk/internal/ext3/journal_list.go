@@ -15,10 +15,9 @@ type JournalRow struct {
 	Operation string `json:"operation"`
 	Path      string `json:"path"`
 	Content   string `json:"content"`
-	Date      string `json:"date"` // RFC3339
+	Date      string `json:"date"`
 }
 
-// ListJournal devuelve las entradas del journal como arreglo de filas listas para serializar.
 func ListJournal(reg *mount.Registry, id string) ([]JournalRow, error) {
 	mp, ok := reg.GetByID(id)
 	if !ok {
@@ -33,7 +32,7 @@ func ListJournal(reg *mount.Registry, id string) ([]JournalRow, error) {
 		return nil, fmt.Errorf("journaling: solo aplica para particiones EXT3")
 	}
 
-	entries, err := readAllJournalEntries(mp, sb) // función ya existe en ext3/recovery.go
+	entries, err := readAllJournalEntries(mp, sb)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +57,6 @@ func ListJournal(reg *mount.Registry, id string) ([]JournalRow, error) {
 	return out, nil
 }
 
-// ListJournalJSON devuelve el JSON formateado de las entradas del journal.
 func ListJournalJSON(reg *mount.Registry, id string) (string, error) {
 	rows, err := ListJournal(reg, id)
 	if err != nil {
