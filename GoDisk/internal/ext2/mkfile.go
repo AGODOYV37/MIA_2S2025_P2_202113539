@@ -9,6 +9,7 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
+// GoDisk/internal/ext2/mkfile.go
 func CreateOrOverwriteFile(reg *mount.Registry, id, absPath string, data []byte, recursive, force bool, uid, gid int) error {
 	mp, ok := reg.GetByID(id)
 	if !ok {
@@ -19,7 +20,6 @@ func CreateOrOverwriteFile(reg *mount.Registry, id, absPath string, data []byte,
 	if err := readAt(mp.DiskPath, mp.Start, &sb); err != nil {
 		return fmt.Errorf("mkfile: leyendo SB: %w", err)
 	}
-
 	if err := requireSupportedFS(sb, "mkfile"); err != nil {
 		return err
 	}
@@ -53,17 +53,19 @@ func CreateOrOverwriteFile(reg *mount.Registry, id, absPath string, data []byte,
 		if !force {
 			return fmt.Errorf("mkfile: %s ya existe; usa -force para sobreescribir", absPath)
 		}
-
+		// Overwrite: ESCRIBIR UNA SOLA VEZ y listo
 		if err := writeDataToFileInode(mp, &sb, bmBl, childIno, data); err != nil {
 			return err
 		}
-
+		sb.SFirtsIno = FirstFree(bmIn)
+		sb.SFirstBlo = FirstFree(bmBl)
 		if err := saveBitmaps(mp, sb, bmIn, bmBl); err != nil {
 			return err
 		}
 		return writeAt(mp.DiskPath, mp.Start, sb)
 	}
 
+	// Crear nuevo archivo
 	inIdx := FirstFree(bmIn)
 	if inIdx < 0 {
 		return errors.New("mkfile: no hay inodos libres")
@@ -82,20 +84,18 @@ func CreateOrOverwriteFile(reg *mount.Registry, id, absPath string, data []byte,
 		}
 	}
 
+	// Escribe el inodo base (sin bloques aún)
 	if err := writeInodeAt(mp, sb, inIdx, ino); err != nil {
 		return err
 	}
 
-	if err := writeDataToFileInode(mp, &sb, bmBl, inIdx, data); err != nil {
-		return err
-	}
+	// *** IMPORTANTE: escribir datos UNA sola vez ***
 	if err := writeDataToFileInode(mp, &sb, bmBl, inIdx, data); err != nil {
 		return err
 	}
 
-	if err := writeInodeAt(mp, sb, inIdx, ino); err != nil {
-		return err
-	}
+	// *** NO volver a escribir "ino" aquí ***
+	// if err := writeInodeAt(mp, sb, inIdx, ino); err != nil { return err }
 
 	if err := addDirEntry(mp, &sb, bmBl, parentIno, fileName, inIdx); err != nil {
 		return err

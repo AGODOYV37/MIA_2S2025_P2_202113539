@@ -12,7 +12,7 @@ import (
 	"github.com/AGODOYV37/MIA_2S2025_P2_202113539/internal/mount"
 )
 
-func Mkfile(reg *mount.Registry, path string, recursive bool, size int, contPath string, force bool) error {
+func Mkfile(reg *mount.Registry, path string, recursive bool, size int, cont string, force bool) error {
 	path = strings.TrimSpace(path)
 	if path == "" || !strings.HasPrefix(path, "/") {
 		return errors.New("mkfile: -path inválido (debe ser absoluto)")
@@ -22,29 +22,59 @@ func Mkfile(reg *mount.Registry, path string, recursive bool, size int, contPath
 	if err != nil {
 		return errors.New("mkfile: requiere sesión (login)")
 	}
-	if !s.IsRoot {
-		return errors.New("mkfile: operación permitida solo para root")
-	}
 
 	if size < 0 {
 		return errors.New("mkfile: -size no puede ser negativo")
 	}
 
 	var data []byte
-	if strings.TrimSpace(contPath) != "" {
-		b, err := os.ReadFile(contPath)
+	cont = strings.TrimSpace(cont)
+	switch {
+	case cont == "":
+		// sin -cont: usa -size si viene
+		if size > 0 {
+			const pat = "0123456789"
+			data = make([]byte, size)
+			for i := 0; i < size; i++ {
+				data[i] = pat[i%len(pat)]
+			}
+		} else {
+			data = nil
+		}
+
+	case strings.HasPrefix(cont, "text:"):
+		// Forzar literal
+		data = []byte(cont[len("text:"):])
+
+	case strings.HasPrefix(cont, "file:"):
+		// Forzar ruta de host
+		host := strings.TrimSpace(cont[len("file:"):])
+		b, err := os.ReadFile(host)
 		if err != nil {
-			return fmt.Errorf("mkfile: no pude leer -cont: %w", err)
+			return fmt.Errorf("mkfile: no pude leer -cont (file): %w", err)
 		}
 		data = b
-	} else if size > 0 {
-		const pat = "0123456789"
-		data = make([]byte, size)
-		for i := 0; i < size; i++ {
-			data[i] = pat[i%len(pat)]
+
+	case strings.HasPrefix(cont, "@"):
+		// Convención tipo @/ruta/host para ruta explícita
+		host := strings.TrimSpace(strings.TrimPrefix(cont, "@"))
+		b, err := os.ReadFile(host)
+		if err != nil {
+			return fmt.Errorf("mkfile: no pude leer -cont (@file): %w", err)
 		}
-	} else {
-		data = nil
+		data = b
+
+	default:
+		// Heurística: si existe como archivo en el host -> léelo; si no, trátalo como texto literal.
+		if fi, err := os.Stat(cont); err == nil && !fi.IsDir() {
+			b, err := os.ReadFile(cont)
+			if err != nil {
+				return fmt.Errorf("mkfile: no pude leer -cont (file): %w", err)
+			}
+			data = b
+		} else {
+			data = []byte(cont) // literal
+		}
 	}
 
 	// Crear / sobrescribir archivo
