@@ -201,7 +201,7 @@ cat -file1=/home/user1/archivo1.txt
 #  17 y 18: JOURNAL con solo EXT3
 
 # Ver journal de partición EXT3 (391A es EXT3)
-journalig -id=391A
+journaling -id=391A
 
 #LOGIN ROOT
 

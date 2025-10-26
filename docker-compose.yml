@@ -1,0 +1,27 @@
+services:
+  api:
+    build:
+      context: ./GoDisk
+      dockerfile: Dockerfile
+    container_name: godisk-api
+    environment:
+      - HTTP_ADDR=:8080
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080 || exit 1"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+      start_period: 10s
+
+  web:
+    build:
+      context: ./GoDisk/api/extreamfs-ui
+      dockerfile: Dockerfile
+    container_name: extreamfs-web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "80:80"
