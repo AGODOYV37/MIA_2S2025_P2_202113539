@@ -86,7 +86,7 @@ func (s *Service) DebugString() string {
 	return fmt.Sprintf("mounted: %s", line)
 }
 
-// Unmount por ID (recomendado)
+// Unmount por ID 
 func (s *Service) UnmountByID(id string) error {
 	mp, ok := s.reg.RemoveByID(id)
 	if !ok {
